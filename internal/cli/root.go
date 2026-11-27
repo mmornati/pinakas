@@ -118,6 +118,7 @@ func (app *App) rootCommand() *cobra.Command {
 		app.checkCICommand(),
 		app.defectCommand(),
 		app.reportCommand(),
+		app.mcpCommand(),
 	)
 	return root
 }

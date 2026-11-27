@@ -149,11 +149,33 @@ The check fails when the description closes no card of the board (`Closes #42`),
 | `pinakas release [--to ready] [--keep-assignee]` | Drop the claim without actuals and unassign yourself |
 | `pinakas defect <story> <bug> [--at 2026-11-20] [--note ...]` | Link a bug back to the story that introduced it |
 | `pinakas report [--since 30d] [--status done,review\|--all] [--measured] [--format table\|json\|csv\|markdown]` | Per-story metrics and a summary; the done column by default |
+| `pinakas mcp` | MCP server over stdio for any MCP client (see below) |
 | `pinakas check-pr` / `pinakas check-stop` `[--format claude\|copilot\|codex]` | Hook entry points. Claude Code: exit 2 with the reason on stderr. Copilot and Codex: a deny or block decision as JSON |
 | `pinakas sync-pr` / `pinakas check-ci` | GitHub Action entry points, reading `GITHUB_EVENT_PATH` |
 | `pinakas init [--copilot] [--codex] [--workflow]` | Write `.pinakas.yml`, the Copilot or Codex hooks and the workflow; never overwrites |
 
 Issues can be written `42`, `#42` or `owner/name#42`. The claim is stored inside the git directory, so each worktree (and each parallel agent) tracks its own card and nothing gets committed.
+
+## MCP server
+
+`pinakas mcp` serves the board to any MCP client over stdio, for agents that have no shell or should not get one. Tools: `board_status`, `claim_card`, `move_card`, `record_actuals`, `release_card`, `story_report`, `link_defect`. Each tool runs the matching command, with the same rules (only ready cards, one open claim per working tree). Start it from the repository, so that it finds `.pinakas.yml` and the working tree's claim.
+
+```sh
+claude mcp add pinakas -- pinakas mcp          # Claude Code
+```
+
+```toml
+# Codex: ~/.codex/config.toml
+[mcp_servers.pinakas]
+command = "pinakas"
+args = ["mcp"]
+```
+
+```json
+{ "mcpServers": { "pinakas": { "command": "pinakas", "args": ["mcp"] } } }
+```
+
+The hooks still guard pull requests and stops; MCP only gives the agent the board.
 
 ## Configuration
 
@@ -236,6 +258,7 @@ A broken guardrail must never stop all work. If the hook input is malformed or t
 | GitHub Copilot | ✅ repository hooks (`.github/hooks`), v0.2 |
 | GitHub Projects | ✅ board backend, v0.1 |
 | Codex | ✅ project hooks (`.codex/hooks.json`) and skills (`.agents/skills`), v0.3 |
+| MCP clients | ✅ `pinakas mcp` (stdio), v0.4 |
 | GitLab | 🔜 board backend, v0.4 |
 
 ## Roadmap
