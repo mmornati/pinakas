@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest an improvement, an adapter or a new guardrail.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: Which step of the human + agent workflow does it help (pick, claim, build, PR, review, merge, measure)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What pinakas should do. Commands, flags or config you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Design rules
+      options:
+        - label: The logic can live in the CLI, with only thin wiring in agent tools.
+        - label: It fails open if the board cannot be reached.
