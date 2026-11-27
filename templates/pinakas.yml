@@ -1,0 +1,16 @@
+# Copy to .pinakas.yml at the root of your repository, or run `pinakas init`.
+board:
+  provider: github
+  owner: your-user-or-org
+  project: 1
+  repo: your-user-or-org/your-repo
+  status_field: Status
+  columns:
+    ready: Ready
+    in_progress: In Progress
+    review: In Review
+    done: Done
+
+rules:
+  require_claim_before_pr: true
+  require_actuals_before_stop: true

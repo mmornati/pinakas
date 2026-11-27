@@ -1,0 +1,517 @@
+package cli
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"text/tabwriter"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/mmornati/pinakas/internal/actuals"
+	"github.com/mmornati/pinakas/internal/board"
+	"github.com/mmornati/pinakas/internal/config"
+	"github.com/mmornati/pinakas/internal/hooks"
+	"github.com/mmornati/pinakas/internal/state"
+)
+
+const configTemplate = `# pinakas configuration — https://github.com/mmornati/pinakas
+board:
+  provider: github
+  # User or organization that owns the GitHub Project (v2).
+  owner: %s
+  # Project number, as in https://github.com/users/<owner>/projects/<number>.
+  project: %d
+  # Default repository for bare issue numbers (owner/name).
+  repo: %s
+  # Single-select field that holds the column.
+  status_field: Status
+  # Workflow keys mapped to the option names of status_field.
+  columns:
+    ready: Ready
+    in_progress: In Progress
+    review: In Review
+    done: Done
+
+rules:
+  # Block "gh pr create" unless a card is claimed and in progress.
+  require_claim_before_pr: true
+  # Block the agent from stopping while its card has no actuals.
+  require_actuals_before_stop: true
+`
+
+func (app *App) initCommand() *cobra.Command {
+	var owner, repo string
+	var project int
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Write a .pinakas.yml in the current directory",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			path := filepath.Join(app.Dir, config.FileName)
+			if _, err := os.Stat(path); err == nil {
+				return fmt.Errorf("%s already exists", config.FileName)
+			}
+			content := fmt.Sprintf(configTemplate, owner, project, repo)
+			if _, err := config.Parse([]byte(content)); err != nil {
+				return fmt.Errorf("%w (pass --owner and --project)", err)
+			}
+			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Wrote %s. Check the column names against your board, then run `pinakas status`.\n", config.FileName)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&owner, "owner", "", "user or organization that owns the project")
+	cmd.Flags().IntVar(&project, "project", 0, "GitHub Project number")
+	cmd.Flags().StringVar(&repo, "repo", "", "default repository (owner/name)")
+	return cmd
+}
+
+func (app *App) statusCommand() *cobra.Command {
+	var asJSON, hook, mine bool
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show the board and the card claimed in this working tree",
+		Long:  "Show the board grouped by column. With --hook, print a short context block for a SessionStart hook and never fail.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			err := app.status(cmd, asJSON, hook, mine)
+			if err != nil && hook {
+				if errors.Is(err, config.ErrNotFound) {
+					return nil // not a pinakas repository: stay silent
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "pinakas: board unavailable (%v). Do not rely on notes about card status; retry `pinakas status`.\n", err)
+				return nil
+			}
+			return err
+		},
+	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print cards as JSON")
+	cmd.Flags().BoolVar(&hook, "hook", false, "print context for a SessionStart hook")
+	cmd.Flags().BoolVar(&mine, "mine", false, "only cards assigned to me")
+	return cmd
+}
+
+func (app *App) status(cmd *cobra.Command, asJSON, hook, mine bool) error {
+	ws, err := app.workspace()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(cmd.Context(), 20*time.Second)
+	defer cancel()
+	b, err := app.board(ws)
+	if err != nil {
+		return err
+	}
+	cards, err := b.Cards(ctx)
+	if err != nil {
+		return err
+	}
+	if mine {
+		me, err := b.CurrentUser(ctx)
+		if err != nil {
+			return err
+		}
+		cards = slices.DeleteFunc(slices.Clone(cards), func(c board.Card) bool { return !slices.Contains(c.Assignees, me) })
+	}
+	st, err := ws.store.Load()
+	if err != nil {
+		return err
+	}
+	out := cmd.OutOrStdout()
+	if asJSON {
+		enc := json.NewEncoder(out)
+		enc.SetIndent("", "  ")
+		return enc.Encode(map[string]any{"current": st.Current, "cards": cards})
+	}
+	if hook {
+		writeHookContext(out, ws.cfg, cards, st)
+		return nil
+	}
+	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+	for _, col := range columnOrder(ws.cfg, cards) {
+		group := byStatus(cards, col)
+		if len(group) == 0 {
+			continue
+		}
+		name := col
+		if name == "" {
+			name = "(no status)"
+		}
+		fmt.Fprintf(w, "%s (%d)\n", name, len(group))
+		for _, c := range group {
+			fmt.Fprintf(w, "  %s\t%s\t%s\n", c.Ref(), c.Title, strings.Join(c.Assignees, ","))
+		}
+	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	if st.Current != nil {
+		fmt.Fprintf(out, "\nClaimed here: %s#%d %s (since %s)\n", st.Current.Repo, st.Current.Number, st.Current.Title, st.Current.ClaimedAt.Local().Format(time.DateTime))
+	}
+	return nil
+}
+
+func writeHookContext(out io.Writer, cfg config.Config, cards []board.Card, st state.State) {
+	fmt.Fprintf(out, "pinakas: live board state (%s project %d). This is the source of truth; ignore older notes about card status.\n", cfg.Board.Owner, cfg.Board.Project)
+	if c := st.Current; c != nil {
+		if c.Open() {
+			fmt.Fprintf(out, "- Claimed in this working tree: %s#%d %s, since %s, actuals not recorded yet.\n", c.Repo, c.Number, c.Title, c.ClaimedAt.UTC().Format(time.RFC3339))
+		} else {
+			fmt.Fprintf(out, "- Last card in this working tree: %s#%d, actuals recorded.\n", c.Repo, c.Number)
+		}
+	} else {
+		fmt.Fprintln(out, "- No card claimed in this working tree.")
+	}
+	for _, col := range columnOrder(cfg, cards) {
+		if n := len(byStatus(cards, col)); n > 0 && col != "" {
+			fmt.Fprintf(out, "- %s: %d\n", col, n)
+		}
+	}
+	ready := byStatus(cards, cfg.Column(config.ColumnReady))
+	if len(ready) > 0 {
+		fmt.Fprintln(out, "Ready to claim:")
+		for i, c := range ready {
+			if i == 10 {
+				fmt.Fprintf(out, "  … and %d more (`pinakas status`)\n", len(ready)-10)
+				break
+			}
+			fmt.Fprintf(out, "  %s %s\n", c.Ref(), c.Title)
+		}
+	}
+	fmt.Fprintln(out, "Workflow: `pinakas claim <issue>` before coding, open the PR only for the claimed card, `pinakas actuals <issue>` before stopping.")
+}
+
+// columnOrder lists the configured columns first, then any others found.
+func columnOrder(cfg config.Config, cards []board.Card) []string {
+	order := []string{
+		cfg.Column(config.ColumnReady),
+		cfg.Column(config.ColumnInProgress),
+		cfg.Column(config.ColumnReview),
+		cfg.Column(config.ColumnDone),
+	}
+	for _, c := range cards {
+		if !slices.Contains(order, c.Status) {
+			order = append(order, c.Status)
+		}
+	}
+	return order
+}
+
+func byStatus(cards []board.Card, status string) []board.Card {
+	var out []board.Card
+	for _, c := range cards {
+		if c.Status == status {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func (app *App) claimCommand() *cobra.Command {
+	var force bool
+	cmd := &cobra.Command{
+		Use:   "claim <issue>",
+		Short: "Assign a ready card to me and move it to in progress",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ws, err := app.workspace()
+			if err != nil {
+				return err
+			}
+			st, err := ws.store.Load()
+			if err != nil {
+				return err
+			}
+			if st.Current.Open() && !force {
+				return fmt.Errorf("%s#%d is still claimed without actuals: run `pinakas actuals %d` or `pinakas release` first (or --force)", st.Current.Repo, st.Current.Number, st.Current.Number)
+			}
+			ctx := cmd.Context()
+			b, err := app.board(ws)
+			if err != nil {
+				return err
+			}
+			card, err := app.findCard(ctx, ws, b, args[0])
+			if err != nil {
+				return err
+			}
+			me, err := b.CurrentUser(ctx)
+			if err != nil {
+				return err
+			}
+			ready := ws.cfg.Column(config.ColumnReady)
+			if card.Status != ready && !force {
+				return fmt.Errorf("%s is in %q, not %q: only ready cards can be claimed (or --force)", card.Ref(), card.Status, ready)
+			}
+			if others := slices.DeleteFunc(slices.Clone(card.Assignees), func(l string) bool { return l == me }); len(others) > 0 && !force {
+				return fmt.Errorf("%s is already assigned to %s (or --force)", card.Ref(), strings.Join(others, ", "))
+			}
+			if !slices.Contains(card.Assignees, me) {
+				if err := b.Assign(ctx, card, me); err != nil {
+					return err
+				}
+			}
+			if err := b.Move(ctx, card, ws.cfg.Column(config.ColumnInProgress)); err != nil {
+				return err
+			}
+			st.Current = &state.Claim{
+				Repo: card.Repo, Number: card.Number, Title: card.Title, URL: card.URL,
+				ItemID: card.ItemID, ClaimedBy: me, ClaimedAt: app.Now().UTC(),
+			}
+			if err := ws.store.Save(st); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Claimed %s %s: assigned to %s, moved to %q.\n", card.Ref(), card.Title, me, ws.cfg.Column(config.ColumnInProgress))
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&force, "force", false, "claim even if the card is not ready, assigned to someone else, or another claim is open")
+	return cmd
+}
+
+func (app *App) moveCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "move <issue> <column>",
+		Short: "Move a card to a column (ready, in_progress, review, done, or a column name)",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ws, err := app.workspace()
+			if err != nil {
+				return err
+			}
+			b, err := app.board(ws)
+			if err != nil {
+				return err
+			}
+			card, err := app.findCard(cmd.Context(), ws, b, args[0])
+			if err != nil {
+				return err
+			}
+			column := ws.cfg.Column(args[1])
+			if err := b.Move(cmd.Context(), card, column); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Moved %s to %q.\n", card.Ref(), column)
+			return nil
+		},
+	}
+}
+
+func (app *App) actualsCommand() *cobra.Command {
+	var tokens int
+	var firstPass, findings, agent, note string
+	cmd := &cobra.Command{
+		Use:   "actuals [issue]",
+		Short: "Record what the claimed card really cost, as an issue comment",
+		Long:  "Record duration (from the claim timestamp), tokens, first-pass success and review findings for the card claimed in this working tree.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ws, err := app.workspace()
+			if err != nil {
+				return err
+			}
+			st, err := ws.store.Load()
+			if err != nil {
+				return err
+			}
+			c := st.Current
+			if c == nil {
+				return errors.New("no card is claimed in this working tree (`pinakas claim <issue>` first)")
+			}
+			if len(args) == 1 {
+				repo, number, err := board.ParseRef(args[0])
+				if err != nil {
+					return err
+				}
+				if number != c.Number || (repo != "" && !strings.EqualFold(repo, c.Repo)) {
+					return fmt.Errorf("%s is not the card claimed here (%s#%d)", args[0], c.Repo, c.Number)
+				}
+			}
+			pass, err := actuals.ParseFirstPass(firstPass)
+			if err != nil {
+				return err
+			}
+			found, err := actuals.ParseFindings(findings)
+			if err != nil {
+				return err
+			}
+			now := app.Now().UTC()
+			a := actuals.New(c.Repo, c.Number, c.ClaimedAt, now)
+			if cmd.Flags().Changed("tokens") {
+				if tokens < 0 {
+					return errors.New("--tokens must be zero or more")
+				}
+				a.Tokens = &tokens
+			}
+			a.FirstPass, a.Findings, a.Agent, a.Note = pass, found, agent, note
+			body, err := a.Comment()
+			if err != nil {
+				return err
+			}
+			b, err := app.board(ws)
+			if err != nil {
+				return err
+			}
+			card := board.Card{ItemID: c.ItemID, Repo: c.Repo, Number: c.Number}
+			if err := b.Comment(cmd.Context(), card, body); err != nil {
+				return err
+			}
+			c.ActualsAt = &now
+			if err := ws.store.Save(st); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Recorded actuals on %s#%d: %d min.\n", c.Repo, c.Number, a.DurationMin)
+			return nil
+		},
+	}
+	cmd.Flags().IntVar(&tokens, "tokens", 0, "tokens used for the story")
+	cmd.Flags().StringVar(&firstPass, "first-pass", "", "did the first review pass without changes (yes|no)")
+	cmd.Flags().StringVar(&findings, "findings", "", "review findings by severity, e.g. major=1,minor=3")
+	cmd.Flags().StringVar(&agent, "agent", os.Getenv("PINAKAS_AGENT"), "agent tool or model that did the work")
+	cmd.Flags().StringVar(&note, "note", "", "free-form note appended to the comment")
+	return cmd
+}
+
+func (app *App) releaseCommand() *cobra.Command {
+	var to string
+	cmd := &cobra.Command{
+		Use:   "release",
+		Short: "Drop the claim in this working tree without recording actuals",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ws, err := app.workspace()
+			if err != nil {
+				return err
+			}
+			st, err := ws.store.Load()
+			if err != nil {
+				return err
+			}
+			c := st.Current
+			if c == nil {
+				fmt.Fprintln(cmd.OutOrStdout(), "Nothing is claimed here.")
+				return nil
+			}
+			if to != "" {
+				b, err := app.board(ws)
+				if err != nil {
+					return err
+				}
+				card := board.Card{ItemID: c.ItemID, Repo: c.Repo, Number: c.Number}
+				if err := b.Move(cmd.Context(), card, ws.cfg.Column(to)); err != nil {
+					return err
+				}
+			}
+			st.Current = nil
+			if err := ws.store.Save(st); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Released %s#%d.\n", c.Repo, c.Number)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&to, "to", "", "also move the card to this column (e.g. ready)")
+	return cmd
+}
+
+func (app *App) checkPRCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check-pr",
+		Short: "Hook: block `gh pr create` unless the claimed card is in progress and assigned",
+		Long:  "Reads a PreToolUse hook payload on stdin. Exits 2 with the reason on stderr to block; exits 0 otherwise.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			in, err := hooks.ParseInput(cmd.InOrStdin())
+			if err != nil {
+				return app.hookWarning(err)
+			}
+			if !hooks.IsPRCreate(in.ToolInput.Command) {
+				return nil
+			}
+			ws, err := app.workspace()
+			if errors.Is(err, config.ErrNotFound) {
+				return nil
+			}
+			if err != nil {
+				return app.hookWarning(err)
+			}
+			st, err := ws.store.Load()
+			if err != nil {
+				return app.hookWarning(err)
+			}
+			var status *hooks.CardStatus
+			if c := st.Current; c != nil {
+				status = app.liveStatus(cmd.Context(), ws, c)
+			}
+			return verdict(hooks.CheckPR(ws.cfg, in, st, status))
+		},
+	}
+}
+
+// liveStatus asks the board for the claimed card; nil when unreachable.
+func (app *App) liveStatus(ctx context.Context, ws *workspace, c *state.Claim) *hooks.CardStatus {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	b, err := app.board(ws)
+	if err != nil {
+		fmt.Fprintf(app.Stderr, "pinakas: board unreachable, checking the local claim only: %v\n", err)
+		return nil
+	}
+	cards, err := b.Cards(ctx)
+	if err != nil {
+		fmt.Fprintf(app.Stderr, "pinakas: board unreachable, checking the local claim only: %v\n", err)
+		return nil
+	}
+	card, err := board.Find(cards, c.Repo, c.Number)
+	if err != nil {
+		return &hooks.CardStatus{Status: "(not on the board)"}
+	}
+	return &hooks.CardStatus{Status: card.Status, Assignees: card.Assignees}
+}
+
+func (app *App) checkStopCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check-stop",
+		Short: "Hook: block stopping while the claimed card has no actuals",
+		Long:  "Reads a Stop hook payload on stdin. Exits 2 with the reason on stderr to block; exits 0 otherwise.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			in, err := hooks.ParseInput(cmd.InOrStdin())
+			if err != nil {
+				return app.hookWarning(err)
+			}
+			ws, err := app.workspace()
+			if errors.Is(err, config.ErrNotFound) {
+				return nil
+			}
+			if err != nil {
+				return app.hookWarning(err)
+			}
+			st, err := ws.store.Load()
+			if err != nil {
+				return app.hookWarning(err)
+			}
+			return verdict(hooks.CheckStop(ws.cfg, in, st))
+		},
+	}
+}
+
+// hookWarning reports a problem without blocking the agent: a broken
+// guardrail must never stop all work.
+func (app *App) hookWarning(err error) error {
+	fmt.Fprintln(app.Stderr, "pinakas: hook skipped:", err)
+	return nil
+}
+
+func verdict(d hooks.Decision) error {
+	if d.Block {
+		return &exitError{code: blockedExitCode, msg: d.Reason}
+	}
+	return nil
+}

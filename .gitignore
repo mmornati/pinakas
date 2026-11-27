@@ -1,0 +1,5 @@
+/pinakas
+/dist/
+.pinakas/
+*.test
+coverage.out
