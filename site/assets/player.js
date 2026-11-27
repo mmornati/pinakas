@@ -97,7 +97,7 @@
   });
   window.addEventListener('resize', function () { size(); frame(); });
 
-  var titles = { fast: 'Promise', drift: 'Problem', enforce: 'Skills', meet: 'pinakas', claim: 'Claim', hooks: 'Hooks', actuals: 'Actuals', action: 'Action', check: 'Check', failopen: 'Fail-open', tools: 'Tools', cta: 'Get it' };
+  var titles = { fast: 'Promise', drift: 'Problem', enforce: 'Skills', meet: 'pinakas', claim: 'Claim', hooks: 'Hooks', actuals: 'Actuals', action: 'Action', check: 'Check', report: 'Report', failopen: 'Fail-open', tools: 'Tools', cta: 'Get it' };
 
   fetch(box.getAttribute('data-timeline'))
     .then(function (r) { return r.json(); })

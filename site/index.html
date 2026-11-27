@@ -9,7 +9,7 @@
 <link rel="canonical" href="https://mmornati.github.io/pinakas/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="pinakas · Keep AI coding agents on the board">
-<meta property="og:description" content="Skills describe the workflow. pinakas enforces it: claims, blocking hooks, a GitHub Action and a required check for human + agent Kanban.">
+<meta property="og:description" content="Skills describe the workflow. pinakas enforces it and measures it: claims, blocking hooks, a GitHub Action, a required check and story metrics for Claude Code, Copilot and Codex.">
 <meta property="og:url" content="https://mmornati.github.io/pinakas/">
 <meta property="og:image" content="https://mmornati.github.io/pinakas/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -40,14 +40,14 @@
 <main id="main">
   <section class="hero">
     <div class="wrap">
-      <p class="kicker">Open source · Go CLI · Claude Code + Copilot</p>
+      <p class="kicker">Open source · Go CLI · Claude Code · Copilot · Codex</p>
       <h1 class="display">Keep AI coding agents <em>on the board.</em></h1>
     </div>
     <div class="wrap grid">
       <div>
         <p class="lede">pinakas makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can’t skip a step.</p>
         <div class="actions">
-          <a class="btn primary" href="#film"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Watch the 90-second film</a>
+          <a class="btn primary" href="#film"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Watch the film (1:40)</a>
           <a class="btn" href="docs/">Read the docs</a>
         </div>
       </div>
@@ -71,8 +71,8 @@
     <div class="wrap">
       <div class="film-head">
         <div>
-          <p class="kicker">The film · 1:30 · voice-over</p>
-          <h2 id="film-title" style="margin-top:16px">pinakas in ninety seconds.</h2>
+          <p class="kicker">The film · 1:40 · voice-over</p>
+          <h2 id="film-title" style="margin-top:16px">pinakas in a hundred seconds.</h2>
         </div>
         <p>Drawn live on a canvas, in your browser, frame by frame. Chapters below jump straight to a part.</p>
       </div>
@@ -84,7 +84,7 @@
       <div class="film-bar">
         <button id="film-play" type="button" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
         <input id="film-seek" type="range" min="0" max="1000" value="0" aria-label="Seek">
-        <span class="t" id="film-time">0:00 / 1:30</span>
+        <span class="t" id="film-time">0:00 / 1:40</span>
         <button id="film-cc" type="button" aria-pressed="true" aria-label="Captions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 100 3M16 10.5a2 2 0 100 3"/></svg></button>
         <button id="film-fs" type="button" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
         <a class="dl" href="assets/pinakas-intro.mp4" download>MP4 ↓</a>
@@ -123,7 +123,7 @@
       </div>
       <div class="layers rv">
         <div class="layer"><span class="n">i</span><h3><code>pinakas</code> CLI</h3><p>Gives agents write access to the board: <code>claim</code>, <code>move</code>, <code>actuals</code>, <code>status</code>, <code>release</code>. The claim lives in the git directory, so every worktree and every parallel agent tracks its own card.</p><span class="tag ok">v0.1</span></div>
-        <div class="layer"><span class="n">ii</span><h3>Agent hooks</h3><p>Session start injects the live board. A pre-tool hook blocks <code>gh pr create</code> for an unclaimed card. A stop hook blocks finishing without actuals.</p><span class="tag ok">Claude Code · Copilot</span></div>
+        <div class="layer"><span class="n">ii</span><h3>Agent hooks</h3><p>Session start injects the live board. A pre-tool hook blocks <code>gh pr create</code> for an unclaimed card. A stop hook blocks finishing without actuals.</p><span class="tag ok">Claude Code · Copilot · Codex</span></div>
         <div class="layer"><span class="n">iii</span><h3>GitHub Action</h3><p>Moves the card when a PR opens, goes back to draft or merges, and posts durations measured from timestamps.</p><span class="tag ok">v0.2</span></div>
         <div class="layer"><span class="n">iv</span><h3>Required check</h3><p>The PR closes a card of the board, every linked card has actuals, and risky labels carry an approval from a human.</p><span class="tag ok">v0.2</span></div>
       </div>
@@ -155,7 +155,7 @@
           <p class="kicker">Guardrails</p>
           <h2 class="h2" id="guard-title">Hooks that <em>say no,</em> and say why.</h2>
         </div>
-        <p class="lede">A blocked agent gets the exact command that unblocks it, so it corrects itself instead of giving up. Claude Code gets exit code 2 and the reason; Copilot gets a deny or block decision as JSON.</p>
+        <p class="lede">A blocked agent gets the exact command that unblocks it, so it corrects itself instead of giving up. Claude Code gets exit code 2 and the reason; Copilot and Codex get a deny or block decision as JSON.</p>
       </div>
       <div class="terms rv">
         <div>
@@ -192,7 +192,7 @@ stopping, or `pinakas release` if abandoned.</span></pre></div>
           <p class="kicker">Measuring</p>
           <h2 class="h2" id="measure-title">Every story, <em>the same numbers.</em></h2>
         </div>
-        <p class="lede">So that experiments can be compared: a new model, a new prompt, a new skill. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports.</p>
+        <p class="lede">So that experiments can be compared: a new model, a new prompt, a new skill. At merge, the Action adds durations measured from timestamps only, and <code>pinakas report</code> turns it all into answers.</p>
       </div>
       <div class="metrics rv">
         <div class="metric"><div class="k">Duration</div><div class="v">47 min</div><p>From claim to actuals, from timestamps.</p></div>
@@ -202,6 +202,31 @@ stopping, or `pinakas release` if abandoned.</span></pre></div>
       </div>
       <div class="code rv" style="margin-top:36px"><pre><span class="c"># recorded as an issue comment with a machine-readable marker the CI check parses back</span>
 pinakas actuals 42 --tokens 182000 --first-pass yes --findings major=0,minor=2</pre><button class="copy" type="button" data-copy>copy</button></div>
+      <div class="terms rv" style="margin-top:56px">
+        <div>
+          <div class="term"><div class="bar"><i></i><i></i><i></i><span>pinakas report</span></div>
+<pre><span class="p">$</span> pinakas report --since 30d
+<span class="d">Story        Agent time  Tokens  First pass  Lead time  Defects 30d</span>
+acme/app#41  45 min      182000  <span class="g">yes</span>         2 h 10     <span class="r">1</span>
+acme/app#44  20 min      64000   <span class="y">no</span>          1 h 05     0 (open)
+acme/app#47  31 min      97000   <span class="g">yes</span>         1 h 40     0
+
+<span class="b">Median agent time: 31 min</span>
+<span class="b">First pass: 67%</span>   <span class="b">Stories with a defect: 33%</span></pre></div>
+          <p class="term-cap"><b>From actuals to answers.</b> Per story and in aggregate, as a table, JSON, CSV or Markdown. The done column by default; <code>--all</code> or <code>--status</code> to widen it.</p>
+        </div>
+        <div>
+          <h3 class="h2" style="font-size:clamp(30px,3.4vw,44px)">Fast but <em>fragile?</em> It shows.</h3>
+          <p class="lede" style="margin:18px 0 22px">When a bug traces back to a delivered story, link them. The report counts defects found within 30 days of delivery, and the defect rate only uses stories whose window has ended.</p>
+          <div class="code"><pre>pinakas defect 41 57   <span class="c"># bug #57 came from story #41</span></pre><button class="copy" type="button" data-copy>copy</button></div>
+          <p class="term-cap" style="margin-top:22px">The Action posts it weekly to the job summary:</p>
+          <div class="code" style="margin-top:10px"><pre>- uses: mmornati/pinakas@v0.3.0
+  with:
+    command: report
+    args: --since 7d
+    token: ${{ secrets.PINAKAS_TOKEN }}</pre><button class="copy" type="button" data-copy>copy</button></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -218,14 +243,14 @@ pinakas actuals 42 --tokens 182000 --first-pass yes --findings major=0,minor=2</
         <li><div><h3>Install the CLI</h3><p>One static binary. The <code>project</code> scope lets it read and move cards.</p>
           <div class="code"><pre>go install github.com/mmornati/pinakas/cmd/pinakas@latest
 gh auth refresh -s project</pre><button class="copy" type="button" data-copy>copy</button></div></div></li>
-        <li><div><h3>Point it at your board</h3><p>Writes <code>.pinakas.yml</code>. Add <code>--copilot</code> for Copilot hooks and <code>--workflow</code> for the Action and required check.</p>
+        <li><div><h3>Point it at your board</h3><p>Writes <code>.pinakas.yml</code>. Add <code>--copilot</code> or <code>--codex</code> for those agents, and <code>--workflow</code> for the Action and required check.</p>
           <div class="code"><pre>pinakas init --owner &lt;user-or-org&gt; --project &lt;number&gt; --repo &lt;owner/name&gt;
 pinakas status</pre><button class="copy" type="button" data-copy>copy</button></div></div></li>
         <li><div><h3>Install the Claude Code plugin</h3><p>Two skills (coordinator, implementer) and three hooks. Then ask your agent to pick the next ready story.</p>
           <div class="code"><pre>/plugin marketplace add mmornati/pinakas
 /plugin install pinakas@pinakas</pre><button class="copy" type="button" data-copy>copy</button></div></div></li>
       </ol>
-      <p class="note-line rv">Using GitHub Copilot, or want the board to follow your pull requests? <a href="docs/#copilot">Copilot setup</a> · <a href="docs/#workflow">Action and required check</a></p>
+      <p class="note-line rv">Using GitHub Copilot or Codex, or want the board to follow your pull requests? <a href="docs/#copilot">Copilot setup</a> · <a href="docs/#codex">Codex setup</a> · <a href="docs/#workflow">Action and required check</a></p>
     </div>
   </section>
 

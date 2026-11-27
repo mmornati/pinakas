@@ -484,8 +484,62 @@
     ctx.restore();
   };
 
+
+  var bars = [42, 18, 65, 33, 27, 51, 12, 38, 46, 22, 58, 31, 20, 36];
+  var defectAt = { 2: '#41', 10: '#52' };
+
+  S.report = function (ctx, lt, d, a) {
+    kicker(ctx, '06 · REPORT', a);
+    txt(ctx, 'From actuals to answers.', 120, 250, { font: F.serif, size: 92, alpha: a * eo(seg(lt, 0, 0.8)) });
+    var cmd = 'pinakas report --since 30d';
+    var tp = seg(lt, 0.5, 1.5);
+    ctx.save(); ctx.globalAlpha *= a * eo(seg(lt, 0.3, 0.7));
+    var cw = txt(ctx, '$ ', 1180, 240, { font: F.mono, size: 28, color: C.terra });
+    var tw = txt(ctx, typed(cmd, tp), 1180 + cw, 240, { font: F.mono, size: 28 });
+    if (tp < 1 && Math.floor(lt * 2) % 2 === 0) { ctx.fillStyle = C.text; ctx.fillRect(1186 + cw + tw, 216, 14, 30); }
+    ctx.restore();
+    var tiles = [
+      { k: 'Median agent time', v: function (p) { return Math.round(33 * p) + ' min'; }, at: 0.3 },
+      { k: 'First pass', v: function (p) { return Math.round(72 * p) + '%'; }, at: 0.42, color: C.olive },
+      { k: 'Median lead time', v: function (p) { return p < 1 ? Math.round(130 * p) + ' min' : '2 h 10'; }, at: 0.54 },
+      { k: 'Defects in 30 days', v: function (p) { return Math.round(8 * p) + '%'; }, at: 0.68, color: C.red }
+    ];
+    tiles.forEach(function (t, i) {
+      var x = 120 + i * 432, y = 330, w = 408, h = 200;
+      var s0 = d * t.at - 0.6;
+      var p = eo(seg(lt, s0, s0 + 0.7));
+      ctx.save(); ctx.globalAlpha *= a * p; ctx.translate(0, (1 - p) * 30);
+      rr(ctx, x, y, w, h, 18); ctx.fillStyle = C.panel; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+      txt(ctx, t.k.toUpperCase(), x + 30, y + 52, { font: F.mono, size: 18, color: C.dim, track: 2 });
+      txt(ctx, t.v(eo(seg(lt, s0 + 0.2, s0 + 1.4))), x + 30, y + 158, { font: F.serif, size: 86, color: t.color || C.text });
+      ctx.restore();
+    });
+    // agent time per story, defects marked in red
+    var bx = 120, by = 820, bw = 1680, maxH = 160, gap = 18;
+    var w1 = (bw - gap * (bars.length - 1)) / bars.length;
+    ctx.save(); ctx.globalAlpha *= a * eo(seg(lt, 1.0, 1.6));
+    ctx.fillStyle = C.line; ctx.fillRect(bx, by + 2, bw, 2);
+    txt(ctx, 'AGENT TIME PER STORY · LAST 30 DAYS', bx + bw, 590, { font: F.mono, size: 18, color: C.mute, track: 2, align: 'right' });
+    ctx.restore();
+    var dl = eo(seg(lt, d * 0.7, d * 0.7 + 0.6));
+    bars.forEach(function (v, i) {
+      var g = eo(seg(lt, 1.2 + i * 0.12, 2.0 + i * 0.12));
+      var h = maxH * v / 65 * g, x = bx + i * (w1 + gap);
+      var bad = defectAt[i];
+      ctx.save(); ctx.globalAlpha *= a;
+      rr(ctx, x, by - h, w1, h, 6);
+      ctx.fillStyle = bad && dl > 0 ? lerpColor(C.paper2, C.red, dl) : C.paper2; ctx.fill();
+      if (bad && dl > 0) {
+        ctx.globalAlpha = a * dl;
+        ctx.beginPath(); ctx.arc(x + w1 / 2, by - h - 26, 10, 0, Math.PI * 2); ctx.fillStyle = C.red; ctx.fill();
+        txt(ctx, 'defect ' + bad, x + w1 / 2, by - h - 48, { font: F.mono, size: 18, color: C.red, align: 'center', weight: 600 });
+      }
+      ctx.restore();
+    });
+  };
+
   S.failopen = function (ctx, lt, d, a) {
-    kicker(ctx, '06 · FAIL-OPEN', a);
+    kicker(ctx, '07 · FAIL-OPEN', a);
     txt(ctx, 'Guardrails fail open.', 120, 250, { font: F.serif, size: 92, alpha: a * eo(seg(lt, 0, 0.8)) });
     var cut = eo(seg(lt, 1.0, 1.6));
     // two nodes: agent and board, with a broken link between them
@@ -530,14 +584,14 @@
     var items = [
       ['Claude Code', 'plugin: skills + hooks', 'today', C.olive],
       ['GitHub Copilot', 'repository hooks', 'today', C.olive],
+      ['Codex', 'project hooks + skills', 'today', C.olive],
       ['GitHub Projects', 'board backend', 'today', C.olive],
-      ['Codex', 'adapter', 'v0.3', C.ochre],
       ['GitLab', 'board backend', 'v0.4', C.ochre],
       ['MCP server', 'any MCP client', 'v0.4', C.ochre]
     ];
     items.forEach(function (it, i) {
       var cx = 120 + (i % 3) * 568, cy = 350 + Math.floor(i / 3) * 280;
-      var start = i < 3 ? 0.4 + i * 0.3 : d * 0.55 + (i - 3) * 0.3;
+      var start = i < 4 ? 0.4 + i * 0.35 : d * 0.62 + (i - 4) * 0.3;
       var p = eo(seg(lt, start, start + 0.7));
       ctx.save(); ctx.globalAlpha *= a * p; ctx.translate(0, (1 - p) * 30);
       rr(ctx, cx, cy, 544, 240, 18); ctx.fillStyle = C.panel; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();

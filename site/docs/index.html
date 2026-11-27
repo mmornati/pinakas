@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pinakas docs · Install, configure, enforce</title>
-<meta name="description" content="Documentation for pinakas: install the CLI, configure your GitHub Project, wire Claude Code and GitHub Copilot hooks, and add the GitHub Action and required check.">
+<meta name="description" content="Documentation for pinakas: install the CLI, configure your GitHub Project, wire Claude Code, GitHub Copilot and Codex hooks, add the GitHub Action and required check, and measure stories with pinakas report.">
 <link rel="canonical" href="https://mmornati.github.io/pinakas/docs/">
 <meta property="og:title" content="pinakas docs">
 <meta property="og:image" content="https://mmornati.github.io/pinakas/assets/og.png">
@@ -94,6 +94,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
         <tr><td><code>--project</code></td><td>GitHub Project number (from its URL)</td></tr>
         <tr><td><code>--repo</code></td><td>Default repository, <code>owner/name</code></td></tr>
         <tr><td><code>--copilot</code></td><td>Also write <code>.github/hooks/pinakas.json</code> for GitHub Copilot</td></tr>
+        <tr><td><code>--codex</code></td><td>Also write <code>.codex/hooks.json</code> and the skills in <code>.agents/skills/</code> for Codex</td></tr>
         <tr><td><code>--workflow</code></td><td>Also write <code>.github/workflows/pinakas.yml</code></td></tr>
       </tbody>
     </table>

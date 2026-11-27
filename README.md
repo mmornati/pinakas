@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://mmornati.github.io/pinakas/"><b>Website</b></a> ·
-  <a href="https://mmornati.github.io/pinakas/#film"><b>90-second film</b></a> ·
+  <a href="https://mmornati.github.io/pinakas/#film"><b>The film (1:40)</b></a> ·
   <a href="https://mmornati.github.io/pinakas/docs/"><b>Documentation</b></a> ·
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="CONTRIBUTING.md"><b>Contributing</b></a>
@@ -23,7 +23,7 @@
 **pinakas** (Greek πίνακας, *board*) makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can't skip a step.
 
 <p align="center">
-  <a href="https://mmornati.github.io/pinakas/#film"><img src=".github/assets/film.png" alt="Watch the 90-second pinakas film, with an English voice-over" width="82%"></a>
+  <a href="https://mmornati.github.io/pinakas/#film"><img src=".github/assets/film.png" alt="Watch the 100-second pinakas film, with an English voice-over" width="82%"></a>
 </p>
 
 ## Why
