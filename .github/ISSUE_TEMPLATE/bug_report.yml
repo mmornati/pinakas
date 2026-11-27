@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in pinakas does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. Please remove tokens and private data from logs.
+  - type: input
+    id: version
+    attributes:
+      label: pinakas version
+      description: Output of `pinakas --version`.
+      placeholder: v0.2.1
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - CLI command
+        - Claude Code hook or skill
+        - GitHub Copilot hook
+        - GitHub Action (sync-pr)
+        - Required check (check-ci)
+        - Website or docs
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands you ran, the card's column before and after, and your `.pinakas.yml` if relevant.
+      render: shell
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or logs
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: macOS 26, gh 2.80, Claude Code 2.x

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://mmornati.github.io/pinakas/docs/
+    about: Install, configuration, hooks, Action and the command reference.
+  - name: Security vulnerability
+    url: https://github.com/mmornati/pinakas/security/advisories/new
+    about: Report vulnerabilities privately, never in a public issue.

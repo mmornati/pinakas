@@ -1,30 +1,80 @@
-# pinakas
+<p align="center">
+  <a href="https://mmornati.github.io/pinakas/"><img src=".github/assets/banner.png" alt="pinakas: keep AI coding agents on the board" width="100%"></a>
+</p>
 
-> Keep AI coding agents on the board.
+<p align="center">
+  <a href="https://github.com/mmornati/pinakas/actions/workflows/ci.yml"><img src="https://github.com/mmornati/pinakas/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/mmornati/pinakas/releases/latest"><img src="https://img.shields.io/github/v/release/mmornati/pinakas?color=e2643a&label=release" alt="Latest release"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/mmornati/pinakas?color=1a1714" alt="Go version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-5e6b3a" alt="License: Apache 2.0"></a>
+  <a href="https://mmornati.github.io/pinakas/"><img src="https://img.shields.io/badge/site-mmornati.github.io%2Fpinakas-c8471d" alt="Website"></a>
+</p>
 
-**[Website, 90-second film and docs →](https://mmornati.github.io/pinakas/)**
+<p align="center">
+  <a href="https://mmornati.github.io/pinakas/"><b>Website</b></a> ·
+  <a href="https://mmornati.github.io/pinakas/#film"><b>90-second film</b></a> ·
+  <a href="https://mmornati.github.io/pinakas/docs/"><b>Documentation</b></a> ·
+  <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="CONTRIBUTING.md"><b>Contributing</b></a>
+</p>
 
-**pinakas** (Greek πίνακας, "board") makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can't skip a step.
+---
+
+**pinakas** (Greek πίνακας, *board*) makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can't skip a step.
+
+<p align="center">
+  <a href="https://mmornati.github.io/pinakas/#film"><img src=".github/assets/film.png" alt="Watch the 90-second pinakas film, with an English voice-over" width="82%"></a>
+</p>
 
 ## Why
 
-Running coding agents from a Kanban board works: stories ship 3 to 6 times faster than estimated. But left alone, agents drift. They forget to move cards, open PRs for stories nobody claimed and finish without logging actuals. A skill can describe the workflow; it can't enforce it. pinakas does.
+Running coding agents from a Kanban board works: stories ship **3 to 6 times faster** than estimated. But left alone, agents drift:
+
+- ✕ **Cards never move.** The PR merged on Tuesday; the card still says In Progress.
+- ✕ **PRs nobody claimed.** An agent opens a pull request for a story it picked on its own.
+- ✕ **No record of the cost.** The session ends without duration, tokens or review findings.
+
+> A skill can describe the workflow. It can't enforce it. **pinakas does.**
 
 ## How it works
 
-| Layer | What it does | Status |
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/lifecycle-dark.png">
+  <img src=".github/assets/lifecycle-light.png" alt="The life of a card: Ready, In Progress, In Review, Done, with the pinakas command guarding each step" width="100%">
+</picture>
+
+| Layer | What it does | Since |
 | --- | --- | --- |
-| `pinakas` CLI | Gives agents write access to the board: `claim`, `move`, `actuals`, `status`, `release` | v0.1 |
-| Agent hooks | Session start injects the live board, a pre-tool hook blocks `gh pr create` for an unclaimed card, a stop hook blocks finishing without actuals. Claude Code, GitHub Copilot and Codex | v0.1, Copilot v0.2, Codex v0.3 |
-| GitHub Action | Moves the card when a PR opens, goes back to draft or merges, and records durations from timestamps | v0.2 |
-| Required check | PR closes a card of the board, the card has actuals, risky labels have a human approval | v0.2 |
-| Metrics | `pinakas report` per story and in aggregate: agent time, tokens, first pass, findings, lead time, defects within 30 days | v0.3 |
+| **`pinakas` CLI** | Gives agents write access to the board: `claim`, `move`, `actuals`, `status`, `release` | v0.1 |
+| **Agent hooks** | Session start injects the live board, a pre-tool hook blocks `gh pr create` for an unclaimed card, a stop hook blocks finishing without actuals. Claude Code, GitHub Copilot and Codex | v0.1, Copilot v0.2, Codex v0.3 |
+| **GitHub Action** | Moves the card when a PR opens, goes back to draft or merges, and records durations from timestamps | v0.2 |
+| **Required check** | PR closes a card of the board, the card has actuals, risky labels have a human approval | v0.2 |
+| **Metrics** | `pinakas report` per story and in aggregate: agent time, tokens, first pass, findings, lead time, defects within 30 days | v0.3 |
 
 All logic lives in the CLI. Each agent tool gets a one-line hook that calls it, so there is one implementation to maintain and a few small wiring files.
 
+### Hooks that say no, and say why
+
+A blocked agent gets the exact command that unblocks it, so it corrects itself instead of giving up.
+
+```console
+$ gh pr create --fill
+✕ blocked by pinakas check-pr
+pinakas: no card is claimed in this working tree. Run `pinakas status` to pick an
+unblocked card, then `pinakas claim <issue>` before opening a pull request.
+```
+
+```console
+● agent is about to finish
+✕ blocked by pinakas check-stop
+pinakas: card #42 (Add OAuth login) has no actuals yet. Record them with
+`pinakas actuals 42 --tokens <n> --first-pass=<yes|no>` before stopping,
+or `pinakas release` if the card is abandoned.
+```
+
 ## Quick start
 
-Requirements: Go 1.27+, the [GitHub CLI](https://cli.github.com) signed in with the `project` scope, and a GitHub Project (v2) with a single-select `Status` field.
+Requirements: the [GitHub CLI](https://cli.github.com) signed in with the `project` scope, and a GitHub Project (v2) with a single-select `Status` field. Go 1.27+ only if you install with `go install`.
 
 ```sh
 # 1. Install the CLI: a prebuilt binary from the releases page
@@ -45,7 +95,8 @@ pinakas status
 
 Then ask your agent to pick the next ready story.
 
-### GitHub Copilot
+<details>
+<summary><b>GitHub Copilot</b></summary>
 
 ```sh
 pinakas init --copilot   # writes .github/hooks/pinakas.json
@@ -53,7 +104,10 @@ pinakas init --copilot   # writes .github/hooks/pinakas.json
 
 Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.0`) and expose `GH_TOKEN`.
 
-### Codex
+</details>
+
+<details>
+<summary><b>Codex</b></summary>
 
 ```sh
 pinakas init --codex     # writes .codex/hooks.json and .agents/skills/pinakas-*
@@ -61,7 +115,10 @@ pinakas init --codex     # writes .codex/hooks.json and .agents/skills/pinakas-*
 
 Codex loads project hooks from `.codex/hooks.json` once the project is trusted, and runs a hook only after you review it: open `/hooks` in Codex and trust the three pinakas hooks (again after any change to them). The hooks use `--format codex`; the skills are the same as in the Claude Code plugin.
 
-### Board sync and required check
+</details>
+
+<details>
+<summary><b>Board sync and required check</b></summary>
 
 ```sh
 pinakas init --workflow  # writes .github/workflows/pinakas.yml
@@ -69,8 +126,6 @@ pinakas init --workflow  # writes .github/workflows/pinakas.yml
 
 1. Create a `PINAKAS_TOKEN` secret that can reach the project: a classic PAT with the `project` and `repo` scopes, or a GitHub App token. `GITHUB_TOKEN` cannot read projects owned by a user.
 2. Make `pinakas / check` a required status check in the branch protection of your default branch.
-
-What the workflow does:
 
 | Pull request event | Card |
 | --- | --- |
@@ -80,6 +135,8 @@ What the workflow does:
 | Closed without merge | Left where it is |
 
 The check fails when the description closes no card of the board (`Closes #42`), when a linked card has no actuals, or when a label from `rules.approval_labels` has no approving review from a human other than the author. Reviews re-run it. Secrets are not available to pull requests from forks, so the workflow is meant for branches of the repository itself.
+
+</details>
 
 ## Commands
 
@@ -125,7 +182,13 @@ rules:
 
 ## Measuring
 
-Every story records the same fields so that experiments can be compared: timestamped duration (from claim to actuals), tokens, first-pass success and review findings by severity. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports. When a bug traces back to a delivered story, `pinakas defect <story> <bug>` links them, so that fast but fragile stories show up.
+Every story records the same fields so that experiments can be compared:
+
+| Duration | Tokens | First pass | Findings |
+| --- | --- | --- | --- |
+| From claim to actuals, from timestamps | Reported by the agent | Did review pass without changes? | Review findings by severity |
+
+At merge, the Action adds durations measured from timestamps only, independent of what the agent reports. When a bug traces back to a delivered story, `pinakas defect <story> <bug>` links them, so that fast but fragile stories show up.
 
 ```console
 $ pinakas report --since 30d
@@ -166,25 +229,23 @@ A broken guardrail must never stop all work. If the hook input is malformed or t
 
 | Tool | Status |
 | --- | --- |
-| Claude Code | plugin (skills + hooks), v0.1 |
-| GitHub Copilot | repository hooks (`.github/hooks`), v0.2 |
-| Codex | project hooks (`.codex/hooks.json`) and skills (`.agents/skills`), v0.3 |
-
-Boards: GitHub Projects (v0.1), GitLab (v0.4).
+| Claude Code | ✅ plugin (skills + hooks), v0.1 |
+| GitHub Copilot | ✅ repository hooks (`.github/hooks`), v0.2 |
+| GitHub Projects | ✅ board backend, v0.1 |
+| Codex | ✅ project hooks (`.codex/hooks.json`) and skills (`.agents/skills`), v0.3 |
+| GitLab | 🔜 board backend, v0.4 |
 
 ## Roadmap
 
-- **v0.1** CLI on GitHub Projects, Claude Code plugin with two skills and three hooks.
-- **v0.2** GitHub Action for card moves and durations, required CI check, Copilot wiring.
-- **v0.3** Per-story metrics schema, `pinakas report`, Codex adapter.
-- **v0.4** GitLab backend, MCP server.
-- **v1.0** Stable config schema, complete docs, example project, signed releases.
+- [x] **v0.1** CLI on GitHub Projects, Claude Code plugin with two skills and three hooks.
+- [x] **v0.2** GitHub Action for card moves and durations, required CI check, Copilot wiring.
+- [x] **v0.3** Per-story metrics schema, `pinakas report`, Codex adapter.
+- [ ] **v0.4** GitLab backend, MCP server.
+- [ ] **v1.0** Stable config schema, complete docs, example project, signed releases.
 
-## Background
+## Contributing
 
-pinakas grew out of running real projects with a human + agent Kanban workflow; see [blog.mornati.net](https://blog.mornati.net).
-
-## Development
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started, and the [Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ```sh
 go test -race ./...
@@ -193,6 +254,12 @@ golangci-lint run
 
 Releases: create a GitHub release with a `vX.Y.Z` tag. The `release` workflow runs GoReleaser and attaches binaries for Linux, macOS and Windows (amd64 and arm64) plus checksums, keeping the notes written on the release page.
 
+## Background
+
+pinakas grew out of running real projects with a human + agent Kanban workflow; see [blog.mornati.net](https://blog.mornati.net).
+
 ## License
 
-[Apache 2.0](LICENSE)
+[Apache 2.0](LICENSE) © Marco Mornati
+
+<p align="center"><br><a href="https://mmornati.github.io/pinakas/"><img src=".github/assets/mark.svg" width="48" alt="pinakas"></a></p>
