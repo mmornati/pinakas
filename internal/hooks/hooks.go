@@ -77,9 +77,10 @@ func block(format string, args ...any) Decision {
 	return Decision{Block: true, Reason: fmt.Sprintf(format, args...)}
 }
 
-var prCreate = regexp.MustCompile(`(^|[\s;&|(])gh\s+pr\s+create($|[\s;&|)])`)
+var prCreate = regexp.MustCompile(`(^|[\s;&|(])(gh\s+pr|glab\s+mr)\s+create($|[\s;&|)])`)
 
-// IsPRCreate reports whether a shell command opens a pull request.
+// IsPRCreate reports whether a shell command opens a pull request
+// (gh pr create) or a GitLab merge request (glab mr create).
 func IsPRCreate(command string) bool {
 	return prCreate.MatchString(command)
 }

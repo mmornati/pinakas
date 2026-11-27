@@ -60,8 +60,32 @@ rules:
   exempt_authors: ["dependabot[bot]", "renovate[bot]"]
 `
 
+const gitlabConfigTemplate = `# pinakas configuration — https://github.com/mmornati/pinakas
+board:
+  provider: gitlab
+  # GitLab instance. The token comes from GITLAB_TOKEN (api scope).
+  url: %s
+  # Project path: the board, and the default project for bare issue numbers.
+  repo: %s
+  # Optional group path: the board then spans every project of the group.
+  owner: %s
+  # Workflow keys mapped to labels, one per column. Scoped labels keep
+  # a single column per issue. Moving to done also closes the issue.
+  columns:
+    ready: "workflow::ready"
+    in_progress: "workflow::in progress"
+    review: "workflow::review"
+    done: "workflow::done"
+
+rules:
+  # Block "gh pr create" / "glab mr create" unless a card is claimed and in progress.
+  require_claim_before_pr: true
+  # Block the agent from stopping while its card has no actuals.
+  require_actuals_before_stop: true
+`
+
 func (app *App) initCommand() *cobra.Command {
-	var owner, repo string
+	var owner, repo, provider, gitlabURL string
 	var project int
 	var copilot, codex, workflow bool
 	cmd := &cobra.Command{
@@ -79,9 +103,16 @@ func (app *App) initCommand() *cobra.Command {
 				}
 				fmt.Fprintf(out, "Kept the existing %s.\n", config.FileName)
 			} else {
-				content := fmt.Sprintf(configTemplate, owner, project, repo)
+				content, hint := fmt.Sprintf(configTemplate, owner, project, repo), "pass --owner and --project"
+				switch provider {
+				case config.ProviderGitHub:
+				case config.ProviderGitLab:
+					content, hint = fmt.Sprintf(gitlabConfigTemplate, gitlabURL, repo, owner), "pass --repo group/project, or --owner group"
+				default:
+					return fmt.Errorf("unknown --provider %q (use github or gitlab)", provider)
+				}
 				if _, err := config.Parse([]byte(content)); err != nil {
-					return fmt.Errorf("%w (pass --owner and --project)", err)
+					return fmt.Errorf("%w (%s)", err, hint)
 				}
 				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 					return err
@@ -129,9 +160,11 @@ func (app *App) initCommand() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&owner, "owner", "", "user or organization that owns the project")
+	cmd.Flags().StringVar(&provider, "provider", config.ProviderGitHub, "board backend: github or gitlab")
+	cmd.Flags().StringVar(&gitlabURL, "url", "https://gitlab.com", "GitLab instance (with --provider gitlab)")
+	cmd.Flags().StringVar(&owner, "owner", "", "user or organization that owns the project (GitLab: optional group path)")
 	cmd.Flags().IntVar(&project, "project", 0, "GitHub Project number")
-	cmd.Flags().StringVar(&repo, "repo", "", "default repository (owner/name)")
+	cmd.Flags().StringVar(&repo, "repo", "", "default repository (owner/name; GitLab: group/project)")
 	cmd.Flags().BoolVar(&copilot, "copilot", false, "also write .github/hooks/pinakas.json for GitHub Copilot")
 	cmd.Flags().BoolVar(&codex, "codex", false, "also write .codex/hooks.json and .agents/skills for OpenAI Codex")
 	cmd.Flags().BoolVar(&workflow, "workflow", false, "also write .github/workflows/pinakas.yml")
@@ -257,7 +290,7 @@ func (app *App) status(cmd *cobra.Command, out io.Writer, asJSON, hook, mine boo
 }
 
 func writeHookContext(out io.Writer, cfg config.Config, cards []board.Card, st state.State) {
-	fmt.Fprintf(out, "pinakas: live board state (%s project %d). This is the source of truth; ignore older notes about card status.\n", cfg.Board.Owner, cfg.Board.Project)
+	fmt.Fprintf(out, "pinakas: live board state (%s). This is the source of truth; ignore older notes about card status.\n", cfg.Name())
 	if c := st.Current; c != nil {
 		if c.Open() {
 			fmt.Fprintf(out, "- Claimed in this working tree: %s#%d %s, since %s, actuals not recorded yet.\n", c.Repo, c.Number, c.Title, c.ClaimedAt.UTC().Format(time.RFC3339))

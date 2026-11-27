@@ -25,6 +25,8 @@ func TestIsPRCreate(t *testing.T) {
 		"gh pr view 3":                  false,
 		"echo 'nogh pr create'":         false,
 		"gh pr createfoo":               false,
+		"glab mr create --fill":         true,
+		"glab mr list":                  false,
 		"gh issue create":               false,
 	}
 	for cmd, want := range cases {
