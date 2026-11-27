@@ -1,0 +1,27 @@
+{
+  "description": "pinakas guardrails: inject the live board at session start, block PRs for unclaimed cards, block stopping without actuals.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "pinakas status --hook", "timeout": 30 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "pinakas check-pr", "timeout": 20 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "pinakas check-stop", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

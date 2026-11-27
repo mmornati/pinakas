@@ -1,0 +1,14 @@
+{
+  "name": "pinakas",
+  "owner": {
+    "name": "Marco Mornati",
+    "url": "https://github.com/mmornati"
+  },
+  "plugins": [
+    {
+      "name": "pinakas",
+      "source": "./plugin",
+      "description": "Keep AI coding agents on the board: claim cards, record actuals, and block PRs and stops that skip the workflow."
+    }
+  ]
+}
