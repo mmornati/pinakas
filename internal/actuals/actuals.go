@@ -2,7 +2,7 @@
 //
 // Every story gets the same fields so that experiments can be compared:
 // timestamped duration, tokens, first-pass success and review findings by
-// severity. Defects found later are tracked separately (v0.3).
+// severity. Defects found later are linked with `pinakas defect`.
 package actuals
 
 import (

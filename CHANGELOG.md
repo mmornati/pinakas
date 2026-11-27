@@ -2,6 +2,14 @@
 
 Notable changes to pinakas. Release notes with binaries live on the [releases page](https://github.com/mmornati/pinakas/releases).
 
+## [0.3.0] - 2026-11-27
+
+- `pinakas report`: per-story metrics and a summary from the actuals, timing and defect markers (agent time, tokens, first-pass rate, findings, lead and review time, defects within 30 days), as a table, JSON, CSV or Markdown; `--since`, `--status`/`--all`, `--measured`.
+- `pinakas defect <story> <bug>` links a bug back to the story that introduced it.
+- GitHub Action: `command: report` with an `args` input writes the report to the job summary.
+- Codex: `--format codex` for the hooks, `pinakas init --codex` writes `.codex/hooks.json` and the skills to `.agents/skills/`.
+- Plugin 0.3.0; the coordinator skill covers `report` and `defect`.
+
 ## [0.2.1] - 2026-11-27
 
 Fixes found on a real GitHub Project, and prebuilt binaries.
@@ -27,6 +35,7 @@ Fixes found on a real GitHub Project, and prebuilt binaries.
 - Claude Code plugin with the coordinator and implementer skills and the SessionStart, PreToolUse and Stop hooks.
 - Per-worktree claims stored in the git directory.
 
+[0.3.0]: https://github.com/mmornati/pinakas/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/mmornati/pinakas/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mmornati/pinakas/releases/tag/v0.2.0
 [0.1.0]: https://github.com/mmornati/pinakas/commit/6987e356a6a50d1cfd226a8369d4de4aeb8fc09b
