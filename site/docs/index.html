@@ -79,7 +79,7 @@
     </ul>
     <div class="code"><pre>go install github.com/mmornati/pinakas/cmd/pinakas@latest
 gh auth refresh -s project</pre><button class="copy" type="button" data-copy>copy</button></div>
-    <p>Pin a version (for example <code>@v0.2.0</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
+    <p>Pin a version (for example <code>@v0.2.1</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
 
     <h2 id="configure">Configure<a class="anchor" href="#configure">#</a></h2>
     <p>Run <code>pinakas init</code> at the root of the repository. It writes <code>.pinakas.yml</code> and never overwrites a file that already exists.</p>
@@ -128,7 +128,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27.x"
-      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.0</pre><button class="copy" type="button" data-copy>copy</button></div>
+      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.1</pre><button class="copy" type="button" data-copy>copy</button></div>
 
     <h2 id="workflow-agents">The agent workflow<a class="anchor" href="#workflow-agents">#</a></h2>
     <ol>
@@ -167,7 +167,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
 
     <h3 id="action-inputs">Using the action directly</h3>
     <div class="code"><pre>- uses: actions/checkout@v7
-- uses: mmornati/pinakas@v0.2.0
+- uses: mmornati/pinakas@v0.2.1
   with:
     command: check-ci        # or sync-pr
     token: ${{ secrets.PINAKAS_TOKEN }}</pre><button class="copy" type="button" data-copy>copy</button></div>
