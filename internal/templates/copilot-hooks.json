@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "pinakas status --hook --format copilot",
+        "powershell": "pinakas status --hook --format copilot",
+        "timeoutSec": 30
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "pinakas check-pr --format copilot",
+        "powershell": "pinakas check-pr --format copilot",
+        "timeoutSec": 20
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "pinakas check-stop --format copilot",
+        "powershell": "pinakas check-stop --format copilot",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

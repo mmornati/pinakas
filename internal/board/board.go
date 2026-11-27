@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Card is one issue on the board.
@@ -35,6 +36,22 @@ type Board interface {
 	Comment(ctx context.Context, card Card, body string) error
 	// CurrentUser returns the login the backend is authenticated as.
 	CurrentUser(ctx context.Context) (string, error)
+	// Comments returns the bodies of the comments on an issue.
+	Comments(ctx context.Context, repo string, number int) ([]string, error)
+	// FirstAssignedAt returns when the issue was first assigned, or the
+	// zero time when it never was.
+	FirstAssignedAt(ctx context.Context, repo string, number int) (time.Time, error)
+	// Reviews returns the latest review of each reviewer on a pull request.
+	Reviews(ctx context.Context, repo string, number int) ([]Review, error)
+}
+
+// Review is the latest state of one reviewer on a pull request.
+type Review struct {
+	Login string `json:"login"`
+	// Bot is true for GitHub Apps and bot accounts.
+	Bot bool `json:"bot"`
+	// State is APPROVED, CHANGES_REQUESTED, COMMENTED or DISMISSED.
+	State string `json:"state"`
 }
 
 // ErrCardNotFound is returned when an issue is not on the board.

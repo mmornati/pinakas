@@ -14,14 +14,19 @@ import (
 	"github.com/mmornati/pinakas/internal/state"
 )
 
-// Input is the subset of the hook payload pinakas reads. Field names follow
-// Claude Code; other tools are mapped onto it by their adapters.
+// Input is the subset of the hook payload pinakas reads. It accepts the
+// Claude Code shape (snake_case, tool_input object) and the GitHub Copilot
+// shape (camelCase, toolArgs as an object or a JSON-encoded string).
 type Input struct {
 	HookEventName  string    `json:"hook_event_name"`
 	ToolName       string    `json:"tool_name"`
 	ToolInput      ToolInput `json:"tool_input"`
 	StopHookActive bool      `json:"stop_hook_active"`
 	Cwd            string    `json:"cwd"`
+
+	// Copilot fields, folded into the ones above by ParseInput.
+	CopilotToolName string          `json:"toolName"`
+	CopilotToolArgs json.RawMessage `json:"toolArgs"`
 }
 
 // ToolInput carries the shell command for Bash-like tools.
@@ -41,6 +46,20 @@ func ParseInput(r io.Reader) (Input, error) {
 	}
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return in, fmt.Errorf("decode hook input: %w", err)
+	}
+	if in.ToolName == "" {
+		in.ToolName = in.CopilotToolName
+	}
+	if in.ToolInput.Command == "" && len(in.CopilotToolArgs) > 0 {
+		args := []byte(in.CopilotToolArgs)
+		var encoded string
+		if json.Unmarshal(args, &encoded) == nil {
+			args = []byte(encoded)
+		}
+		var ti ToolInput
+		if err := json.Unmarshal(args, &ti); err == nil {
+			in.ToolInput = ti
+		}
 	}
 	return in, nil
 }

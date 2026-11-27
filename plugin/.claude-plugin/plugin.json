@@ -1,6 +1,6 @@
 {
   "name": "pinakas",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keep AI coding agents on the board: claim cards, record actuals, and block PRs and stops that skip the workflow.",
   "author": {
     "name": "Marco Mornati",
@@ -9,5 +9,11 @@
   "homepage": "https://github.com/mmornati/pinakas",
   "repository": "https://github.com/mmornati/pinakas",
   "license": "Apache-2.0",
-  "keywords": ["kanban", "agents", "workflow", "github-projects", "hooks"]
+  "keywords": [
+    "kanban",
+    "agents",
+    "workflow",
+    "github-projects",
+    "hooks"
+  ]
 }

@@ -13,9 +13,9 @@ Running coding agents from a Kanban board works: stories ship 3 to 6 times faste
 | Layer | What it does | Status |
 | --- | --- | --- |
 | `pinakas` CLI | Gives agents write access to the board: `claim`, `move`, `actuals`, `status`, `release` | v0.1 |
-| Agent hooks | `SessionStart` injects the live board, `PreToolUse` blocks `gh pr create` for an unclaimed card, `Stop` blocks finishing without actuals | v0.1 |
-| GitHub Action | Moves the card when a PR opens or merges, computes duration from timestamps | v0.2 |
-| Required check | PR linked to an issue, actuals filled, human approval by risk class | v0.2 |
+| Agent hooks | Session start injects the live board, a pre-tool hook blocks `gh pr create` for an unclaimed card, a stop hook blocks finishing without actuals. Claude Code and GitHub Copilot | v0.1, Copilot v0.2 |
+| GitHub Action | Moves the card when a PR opens, goes back to draft or merges, and records durations from timestamps | v0.2 |
+| Required check | PR closes a card of the board, the card has actuals, risky labels have a human approval | v0.2 |
 
 All logic lives in the CLI. Each agent tool gets a one-line hook that calls it, so there is one implementation to maintain and a few small wiring files.
 
@@ -41,6 +41,34 @@ pinakas status
 
 Then ask your agent to pick the next ready story.
 
+### GitHub Copilot
+
+```sh
+pinakas init --copilot   # writes .github/hooks/pinakas.json
+```
+
+Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.0`) and expose `GH_TOKEN`.
+
+### Board sync and required check
+
+```sh
+pinakas init --workflow  # writes .github/workflows/pinakas.yml
+```
+
+1. Create a `PINAKAS_TOKEN` secret that can reach the project: a classic PAT with the `project` and `repo` scopes, or a GitHub App token. `GITHUB_TOKEN` cannot read projects owned by a user.
+2. Make `pinakas / check` a required status check in the branch protection of your default branch.
+
+What the workflow does:
+
+| Pull request event | Card |
+| --- | --- |
+| Opened, reopened, ready for review, description edited | Moved to review |
+| Converted to draft | Moved back to in progress |
+| Merged | Moved to done, timing comment posted (claim to PR, PR to merge, claim to merge) |
+| Closed without merge | Left where it is |
+
+The check fails when the description closes no card of the board (`Closes #42`), when a linked card has no actuals, or when a label from `rules.approval_labels` has no approving review from a human other than the author. Reviews re-run it. Secrets are not available to pull requests from forks, so the workflow is meant for branches of the repository itself.
+
 ## Commands
 
 | Command | What it does |
@@ -50,7 +78,9 @@ Then ask your agent to pick the next ready story.
 | `pinakas move <issue> <column>` | Move a card (`ready`, `in_progress`, `review`, `done` or a column name) |
 | `pinakas actuals [issue] --tokens N --first-pass yes --findings major=1,minor=3` | Post the story's actuals as an issue comment |
 | `pinakas release [--to ready]` | Drop the claim without actuals |
-| `pinakas check-pr` / `pinakas check-stop` | Hook entry points: exit 2 with a reason to block |
+| `pinakas check-pr` / `pinakas check-stop` `[--format claude\|copilot]` | Hook entry points. Claude Code: exit 2 with the reason on stderr. Copilot: a deny or block decision as JSON |
+| `pinakas sync-pr` / `pinakas check-ci` | GitHub Action entry points, reading `GITHUB_EVENT_PATH` |
+| `pinakas init [--copilot] [--workflow]` | Write `.pinakas.yml`, the Copilot hooks and the workflow; never overwrites |
 
 Issues can be written `42`, `#42` or `owner/name#42`. The claim is stored inside the git directory, so each worktree (and each parallel agent) tracks its own card and nothing gets committed.
 
@@ -71,13 +101,17 @@ board:
     review: In Review
     done: Done
 rules:
-  require_claim_before_pr: true
-  require_actuals_before_stop: true
+  require_claim_before_pr: true        # hook: no PR without a claimed card
+  require_actuals_before_stop: true    # hook: no stop without actuals
+  require_linked_issue: true           # check: PR must close a card
+  require_actuals_on_pr: true          # check: linked cards need actuals
+  approval_labels: ["risk:high"]       # check: these labels need a human approval
+  exempt_authors: ["dependabot[bot]", "renovate[bot]"]
 ```
 
 ## Measuring
 
-Every story records the same fields so that experiments can be compared: timestamped duration (from claim to actuals), tokens, first-pass success and review findings by severity. Defects found within 30 days and `pinakas report` come in v0.3. Each actuals comment carries a machine-readable marker that the report and CI checks parse back.
+Every story records the same fields so that experiments can be compared: timestamped duration (from claim to actuals), tokens, first-pass success and review findings by severity. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports. Defects found within 30 days and `pinakas report` come in v0.3. Actuals and timing comments carry a machine-readable marker that the report and the CI check parse back.
 
 ## Guardrails are fail-open
 
@@ -87,8 +121,8 @@ A broken guardrail must never stop all work. If the hook input is malformed or t
 
 | Tool | Status |
 | --- | --- |
-| Claude Code | v0.1 |
-| GitHub Copilot | v0.2 |
+| Claude Code | plugin (skills + hooks), v0.1 |
+| GitHub Copilot | repository hooks (`.github/hooks`), v0.2 |
 | Codex | v0.3 |
 
 Boards: GitHub Projects (v0.1), GitLab (v0.4).

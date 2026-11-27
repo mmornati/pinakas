@@ -14,3 +14,7 @@ board:
 rules:
   require_claim_before_pr: true
   require_actuals_before_stop: true
+  require_linked_issue: true
+  require_actuals_on_pr: true
+  approval_labels: ["risk:high"]
+  exempt_authors: ["dependabot[bot]", "renovate[bot]"]

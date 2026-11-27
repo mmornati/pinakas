@@ -28,8 +28,11 @@ messages about which card is where: read it with `pinakas status`.
 ## Reviewing and closing
 
 - A human reviews and merges every pull request. Do not merge.
-- After merge, move the card with `pinakas move <issue> done` (automated by
-  the GitHub Action from v0.2).
+- Pull requests labelled with a risk class from `rules.approval_labels`
+  (default `risk:high`) need a human approval before the required check
+  passes. Label risky changes; do not remove the label to get green.
+- After merge, the GitHub Action moves the card to Done and posts a timing
+  comment. Without the Action, run `pinakas move <issue> done`.
 
 ## Reporting
 
