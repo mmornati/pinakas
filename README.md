@@ -15,9 +15,10 @@ Running coding agents from a Kanban board works: stories ship 3 to 6 times faste
 | Layer | What it does | Status |
 | --- | --- | --- |
 | `pinakas` CLI | Gives agents write access to the board: `claim`, `move`, `actuals`, `status`, `release` | v0.1 |
-| Agent hooks | Session start injects the live board, a pre-tool hook blocks `gh pr create` for an unclaimed card, a stop hook blocks finishing without actuals. Claude Code and GitHub Copilot | v0.1, Copilot v0.2 |
+| Agent hooks | Session start injects the live board, a pre-tool hook blocks `gh pr create` for an unclaimed card, a stop hook blocks finishing without actuals. Claude Code, GitHub Copilot and Codex | v0.1, Copilot v0.2, Codex v0.3 |
 | GitHub Action | Moves the card when a PR opens, goes back to draft or merges, and records durations from timestamps | v0.2 |
 | Required check | PR closes a card of the board, the card has actuals, risky labels have a human approval | v0.2 |
+| Metrics | `pinakas report` per story and in aggregate: agent time, tokens, first pass, findings, lead time, defects within 30 days | v0.3 |
 
 All logic lives in the CLI. Each agent tool gets a one-line hook that calls it, so there is one implementation to maintain and a few small wiring files.
 
@@ -50,7 +51,15 @@ Then ask your agent to pick the next ready story.
 pinakas init --copilot   # writes .github/hooks/pinakas.json
 ```
 
-Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.1`) and expose `GH_TOKEN`.
+Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.0`) and expose `GH_TOKEN`.
+
+### Codex
+
+```sh
+pinakas init --codex     # writes .codex/hooks.json and .agents/skills/pinakas-*
+```
+
+Codex loads project hooks from `.codex/hooks.json` once the project is trusted, and runs a hook only after you review it: open `/hooks` in Codex and trust the three pinakas hooks (again after any change to them). The hooks use `--format codex`; the skills are the same as in the Claude Code plugin.
 
 ### Board sync and required check
 
@@ -81,9 +90,11 @@ The check fails when the description closes no card of the board (`Closes #42`),
 | `pinakas move <issue> <column>` | Move a card (`ready`, `in_progress`, `review`, `done` or a column name) |
 | `pinakas actuals [issue] --tokens N --first-pass yes --findings major=1,minor=3` | Post the story's actuals as an issue comment |
 | `pinakas release [--to ready] [--keep-assignee]` | Drop the claim without actuals and unassign yourself |
-| `pinakas check-pr` / `pinakas check-stop` `[--format claude\|copilot]` | Hook entry points. Claude Code: exit 2 with the reason on stderr. Copilot: a deny or block decision as JSON |
+| `pinakas defect <story> <bug> [--at 2026-11-20] [--note ...]` | Link a bug back to the story that introduced it |
+| `pinakas report [--since 30d] [--status done,review\|--all] [--measured] [--format table\|json\|csv\|markdown]` | Per-story metrics and a summary; the done column by default |
+| `pinakas check-pr` / `pinakas check-stop` `[--format claude\|copilot\|codex]` | Hook entry points. Claude Code: exit 2 with the reason on stderr. Copilot and Codex: a deny or block decision as JSON |
 | `pinakas sync-pr` / `pinakas check-ci` | GitHub Action entry points, reading `GITHUB_EVENT_PATH` |
-| `pinakas init [--copilot] [--workflow]` | Write `.pinakas.yml`, the Copilot hooks and the workflow; never overwrites |
+| `pinakas init [--copilot] [--codex] [--workflow]` | Write `.pinakas.yml`, the Copilot or Codex hooks and the workflow; never overwrites |
 
 Issues can be written `42`, `#42` or `owner/name#42`. The claim is stored inside the git directory, so each worktree (and each parallel agent) tracks its own card and nothing gets committed.
 
@@ -114,7 +125,38 @@ rules:
 
 ## Measuring
 
-Every story records the same fields so that experiments can be compared: timestamped duration (from claim to actuals), tokens, first-pass success and review findings by severity. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports. Defects found within 30 days and `pinakas report` come in v0.3. Actuals and timing comments carry a machine-readable marker that the report and the CI check parse back.
+Every story records the same fields so that experiments can be compared: timestamped duration (from claim to actuals), tokens, first-pass success and review findings by severity. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports. When a bug traces back to a delivered story, `pinakas defect <story> <bug>` links them, so that fast but fragile stories show up.
+
+```console
+$ pinakas report --since 30d
+Story        Title          Delivered   Agent time  Tokens  First pass  Findings  Lead time  Review  Defects 30d
+acme/app#41  Login form     2026-11-02  45 min      182000  yes         minor=2   2 h 10     1 h 25  1
+acme/app#44  Session reset  2026-11-20  20 min      64000   no          major=1   1 h 05     40 min  0 (open)
+
+Stories: 2 (2 with actuals)
+Median agent time: 33 min
+...
+Stories with a defect: 100% of 1 stories with a closed window
+```
+
+The report reads the done column by default (`--status`, `--all` to widen it) and prints a table, JSON, CSV or Markdown. A story is delivered at merge, or when its actuals were recorded if there is no merge. Its defects count when found within 30 days of delivery, and the defect rate only uses stories whose 30-day window has ended. The Action runs it too, for a weekly summary:
+
+```yaml
+on:
+  schedule: [{ cron: "0 7 * * 1" }]
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: mmornati/pinakas@v0.3.0
+        with:
+          command: report
+          args: --since 7d
+          token: ${{ secrets.PINAKAS_TOKEN }}
+```
+
+Actuals, timing and defect comments carry a machine-readable marker that the report and the CI check parse back.
 
 ## Guardrails are fail-open
 
@@ -126,7 +168,7 @@ A broken guardrail must never stop all work. If the hook input is malformed or t
 | --- | --- |
 | Claude Code | plugin (skills + hooks), v0.1 |
 | GitHub Copilot | repository hooks (`.github/hooks`), v0.2 |
-| Codex | v0.3 |
+| Codex | project hooks (`.codex/hooks.json`) and skills (`.agents/skills`), v0.3 |
 
 Boards: GitHub Projects (v0.1), GitLab (v0.4).
 

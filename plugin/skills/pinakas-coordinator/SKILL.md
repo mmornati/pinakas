@@ -38,3 +38,9 @@ messages about which card is where: read it with `pinakas status`.
 
 Report from the board, not from memory: cards per column, what each
 implementer holds, and the actuals recorded on finished cards.
+
+- `pinakas report` measures the done column: agent time, tokens, first-pass
+  rate, review findings, lead time and defects within 30 days. Use
+  `--since 30d`, `--all`, or `--format markdown|json|csv` as needed.
+- When a bug traces back to a delivered story, link it with
+  `pinakas defect <story> <bug>` so that the defect rate stays honest.

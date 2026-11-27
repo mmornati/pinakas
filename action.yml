@@ -7,8 +7,12 @@ branding:
 
 inputs:
   command:
-    description: "sync-pr (move cards and record timing) or check-ci (required workflow check)."
+    description: "sync-pr (move cards and record timing), check-ci (required workflow check) or report (story metrics in the job summary)."
     required: true
+  args:
+    description: "Extra arguments for report, such as \"--since 30d\" or \"--all --measured\"."
+    required: false
+    default: ""
   token:
     description: >-
       Token that can read and write the GitHub Project and the issues: a classic
@@ -16,7 +20,7 @@ inputs:
       GITHUB_TOKEN cannot read projects owned by a user.
     required: true
   version:
-    description: "pinakas version to install. Defaults to the ref this action is used at (e.g. v0.2.0)."
+    description: "pinakas version to install. Defaults to the ref this action is used at (e.g. v0.3.0)."
     required: false
     default: ""
   working-directory:
@@ -44,9 +48,13 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.token }}
         COMMAND: ${{ inputs.command }}
+        ARGS: ${{ inputs.args }}
       run: |
+        pinakas="$(go env GOPATH)/bin/pinakas"
         case "$COMMAND" in
-          sync-pr|check-ci) ;;
-          *) echo "::error::command must be sync-pr or check-ci, got '$COMMAND'"; exit 1 ;;
+          sync-pr|check-ci) "$pinakas" "$COMMAND" ;;
+          report)
+            read -r -a extra <<< "$ARGS"
+            "$pinakas" report --format markdown "${extra[@]}" | tee -a "$GITHUB_STEP_SUMMARY" ;;
+          *) echo "::error::command must be sync-pr, check-ci or report, got '$COMMAND'"; exit 1 ;;
         esac
-        "$(go env GOPATH)/bin/pinakas" "$COMMAND"

@@ -85,16 +85,25 @@ func (t Timing) Comment() (string, error) {
 
 // HasTiming reports whether a comment already records timing for a PR.
 func HasTiming(body string, prNumber int) bool {
+	t, ok := ParseTiming(body)
+	return ok && t.PR == prNumber
+}
+
+// ParseTiming extracts timing from a comment body written by Comment.
+func ParseTiming(body string) (Timing, bool) {
 	_, rest, ok := strings.Cut(body, TimingMarker)
 	if !ok {
-		return false
+		return Timing{}, false
 	}
 	payload, _, ok := strings.Cut(rest, " -->")
 	if !ok {
-		return false
+		return Timing{}, false
 	}
 	var t Timing
-	return json.Unmarshal([]byte(payload), &t) == nil && t.PR == prNumber
+	if json.Unmarshal([]byte(payload), &t) != nil {
+		return Timing{}, false
+	}
+	return t, true
 }
 
 func human(total int) string {

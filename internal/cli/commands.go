@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,6 +23,7 @@ import (
 	"github.com/mmornati/pinakas/internal/hooks"
 	"github.com/mmornati/pinakas/internal/state"
 	"github.com/mmornati/pinakas/internal/templates"
+	"github.com/mmornati/pinakas/plugin"
 )
 
 const configTemplate = `# pinakas configuration — https://github.com/mmornati/pinakas
@@ -60,17 +63,18 @@ rules:
 func (app *App) initCommand() *cobra.Command {
 	var owner, repo string
 	var project int
-	var copilot, workflow bool
+	var copilot, codex, workflow bool
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Write .pinakas.yml, and optionally the Copilot hooks and the GitHub workflow",
+		Short: "Write .pinakas.yml, and optionally the Copilot or Codex hooks and the GitHub workflow",
 		Long: "Write .pinakas.yml in the current directory. --copilot adds .github/hooks/pinakas.json for GitHub Copilot, " +
+			"--codex adds .codex/hooks.json and the pinakas skills in .agents/skills for OpenAI Codex, " +
 			"--workflow adds .github/workflows/pinakas.yml for the board sync and the required check. Existing files are never overwritten.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()
 			path := filepath.Join(app.Dir, config.FileName)
 			if _, err := os.Stat(path); err == nil {
-				if !copilot && !workflow {
+				if !copilot && !codex && !workflow {
 					return fmt.Errorf("%s already exists", config.FileName)
 				}
 				fmt.Fprintf(out, "Kept the existing %s.\n", config.FileName)
@@ -84,15 +88,27 @@ func (app *App) initCommand() *cobra.Command {
 				}
 				fmt.Fprintf(out, "Wrote %s. Check the column names against your board, then run `pinakas status`.\n", config.FileName)
 			}
-			extras := []struct {
+			type extra struct {
 				on   bool
 				path string
 				body []byte
 				next string
-			}{
-				{copilot, filepath.Join(".github", "hooks", "pinakas.json"), templates.CopilotHooks, "Copilot loads it at the next session; the cloud agent needs pinakas installed in copilot-setup-steps.yml."},
-				{workflow, filepath.Join(".github", "workflows", "pinakas.yml"), templates.Workflow, "Add the PINAKAS_TOKEN secret, then make \"pinakas / check\" a required check."},
 			}
+			extras := []extra{
+				{copilot, filepath.Join(".github", "hooks", "pinakas.json"), templates.CopilotHooks, "Copilot loads it at the next session; the cloud agent needs pinakas installed in copilot-setup-steps.yml."},
+				{codex, filepath.Join(".codex", "hooks.json"), templates.CodexHooks, "Codex runs project hooks once you trust them: open `/hooks` in Codex and review them."},
+			}
+			if codex {
+				skills, err := codexSkills()
+				if err != nil {
+					return err
+				}
+				for _, path := range slices.Sorted(maps.Keys(skills)) {
+					body := skills[path]
+					extras = append(extras, extra{true, path, body, "Codex discovers it from .agents/skills."})
+				}
+			}
+			extras = append(extras, extra{workflow, filepath.Join(".github", "workflows", "pinakas.yml"), templates.Workflow, "Add the PINAKAS_TOKEN secret, then make \"pinakas / check\" a required check."})
 			for _, e := range extras {
 				if !e.on {
 					continue
@@ -117,8 +133,27 @@ func (app *App) initCommand() *cobra.Command {
 	cmd.Flags().IntVar(&project, "project", 0, "GitHub Project number")
 	cmd.Flags().StringVar(&repo, "repo", "", "default repository (owner/name)")
 	cmd.Flags().BoolVar(&copilot, "copilot", false, "also write .github/hooks/pinakas.json for GitHub Copilot")
+	cmd.Flags().BoolVar(&codex, "codex", false, "also write .codex/hooks.json and .agents/skills for OpenAI Codex")
 	cmd.Flags().BoolVar(&workflow, "workflow", false, "also write .github/workflows/pinakas.yml")
 	return cmd
+}
+
+// codexSkills maps .agents/skills/<name>/SKILL.md to the plugin skills, in
+// a stable order.
+func codexSkills() (map[string][]byte, error) {
+	out := map[string][]byte{}
+	err := fs.WalkDir(plugin.Skills, "skills", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		body, err := fs.ReadFile(plugin.Skills, p)
+		if err != nil {
+			return err
+		}
+		out[filepath.Join(".agents", filepath.FromSlash(p))] = body
+		return nil
+	})
+	return out, err
 }
 
 func (app *App) statusCommand() *cobra.Command {
@@ -501,7 +536,7 @@ func (app *App) checkPRCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check-pr",
 		Short: "Hook: block `gh pr create` unless the claimed card is in progress and assigned",
-		Long:  "Reads a PreToolUse (Claude Code) or preToolUse (Copilot) payload on stdin. Claude Code format: exits 2 with the reason on stderr to block. Copilot format: prints a deny decision as JSON.",
+		Long:  "Reads a PreToolUse (Claude Code, Codex) or preToolUse (Copilot) payload on stdin. Claude Code format: exits 2 with the reason on stderr to block. Copilot and Codex formats: print a deny decision as JSON.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := checkFormat(format); err != nil {
@@ -562,7 +597,7 @@ func (app *App) checkStopCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "check-stop",
 		Short: "Hook: block stopping while the claimed card has no actuals",
-		Long:  "Reads a Stop (Claude Code) or agentStop (Copilot) payload on stdin. Claude Code format: exits 2 with the reason on stderr to block. Copilot format: prints a block decision as JSON.",
+		Long:  "Reads a Stop (Claude Code, Codex) or agentStop (Copilot) payload on stdin. Claude Code format: exits 2 with the reason on stderr to block. Copilot and Codex formats: print a block decision as JSON.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := checkFormat(format); err != nil {

@@ -13,3 +13,8 @@ var CopilotHooks []byte
 //
 //go:embed workflow.yml
 var Workflow []byte
+
+// CodexHooks is written to .codex/hooks.json.
+//
+//go:embed codex-hooks.json
+var CodexHooks []byte
