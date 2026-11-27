@@ -26,7 +26,8 @@ All logic lives in the CLI. Each agent tool gets a one-line hook that calls it, 
 Requirements: Go 1.27+, the [GitHub CLI](https://cli.github.com) signed in with the `project` scope, and a GitHub Project (v2) with a single-select `Status` field.
 
 ```sh
-# 1. Install the CLI
+# 1. Install the CLI: a prebuilt binary from the releases page
+#    (https://github.com/mmornati/pinakas/releases), or with Go
 go install github.com/mmornati/pinakas/cmd/pinakas@latest
 gh auth refresh -s project
 
@@ -49,7 +50,7 @@ Then ask your agent to pick the next ready story.
 pinakas init --copilot   # writes .github/hooks/pinakas.json
 ```
 
-Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.0`) and expose `GH_TOKEN`.
+Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.1`) and expose `GH_TOKEN`.
 
 ### Board sync and required check
 
@@ -79,7 +80,7 @@ The check fails when the description closes no card of the board (`Closes #42`),
 | `pinakas claim <issue>` | Assign a **Ready** card to you, move it to **In Progress**, start the clock |
 | `pinakas move <issue> <column>` | Move a card (`ready`, `in_progress`, `review`, `done` or a column name) |
 | `pinakas actuals [issue] --tokens N --first-pass yes --findings major=1,minor=3` | Post the story's actuals as an issue comment |
-| `pinakas release [--to ready]` | Drop the claim without actuals |
+| `pinakas release [--to ready] [--keep-assignee]` | Drop the claim without actuals and unassign yourself |
 | `pinakas check-pr` / `pinakas check-stop` `[--format claude\|copilot]` | Hook entry points. Claude Code: exit 2 with the reason on stderr. Copilot: a deny or block decision as JSON |
 | `pinakas sync-pr` / `pinakas check-ci` | GitHub Action entry points, reading `GITHUB_EVENT_PATH` |
 | `pinakas init [--copilot] [--workflow]` | Write `.pinakas.yml`, the Copilot hooks and the workflow; never overwrites |
@@ -147,6 +148,8 @@ pinakas grew out of running real projects with a human + agent Kanban workflow; 
 go test -race ./...
 golangci-lint run
 ```
+
+Releases: create a GitHub release with a `vX.Y.Z` tag. The `release` workflow runs GoReleaser and attaches binaries for Linux, macOS and Windows (amd64 and arm64) plus checksums, keeping the notes written on the release page.
 
 ## License
 

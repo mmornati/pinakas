@@ -149,6 +149,21 @@ func TestHooksNeverBlockOnBadInput(t *testing.T) {
 	}
 }
 
+func TestStatusText(t *testing.T) {
+	h := newHarness(t, true)
+	if code := h.run("", "status"); code != 0 {
+		t.Fatal(h.stderr)
+	}
+	for _, line := range strings.Split(h.stdout.String(), "\n") {
+		if strings.HasSuffix(line, " ") {
+			t.Errorf("trailing space in %q", line)
+		}
+	}
+	if !strings.Contains(h.stdout.String(), "acme/app#2  Logout  someone") {
+		t.Errorf("status = %q", h.stdout)
+	}
+}
+
 func TestStatusHookContext(t *testing.T) {
 	h := newHarness(t, true)
 	if code := h.run("", "status", "--hook"); code != 0 {
@@ -170,8 +185,17 @@ func TestMoveAndRelease(t *testing.T) {
 	if code := h.run("", "claim", "3", "--force"); code != 0 {
 		t.Fatal(h.stderr)
 	}
-	if code := h.run("", "release", "--to", "ready"); code != 0 || !strings.Contains(h.stdout.String(), "Released acme/app#3") {
+	if code := h.run("", "release", "--to", "ready"); code != 0 || !strings.Contains(h.stdout.String(), `Released acme/app#3: unassigned agent-bot, moved to "Ready".`) {
 		t.Fatalf("release: code %d, stdout %q, stderr %q", code, h.stdout, h.stderr)
+	}
+	if len(h.board.CardList[2].Assignees) != 0 || h.board.CardList[2].Status != "Ready" {
+		t.Errorf("released card = %+v", h.board.CardList[2])
+	}
+	if code := h.run("", "claim", "3", "--force"); code != 0 {
+		t.Fatal(h.stderr)
+	}
+	if code := h.run("", "release", "--keep-assignee"); code != 0 || strings.TrimSpace(h.stdout.String()) != "Released acme/app#3." {
+		t.Errorf("release --keep-assignee: %q", h.stdout)
 	}
 	if code := h.run(`{}`, "check-stop"); code != 0 {
 		t.Error("released card must not block stop")

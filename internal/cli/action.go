@@ -110,10 +110,7 @@ func (app *App) checkCICommand() *cobra.Command {
 			}
 			ctx, cancel := context.WithTimeout(cmd.Context(), 2*time.Minute)
 			defer cancel()
-			res, err := pr.Check(ctx, ws.cfg, b, ev)
-			if err != nil {
-				return err
-			}
+			res := pr.Check(ctx, ws.cfg, b, ev)
 			printLines(cmd.OutOrStdout(), res.Lines)
 			writeSummary("pinakas workflow check", res.Lines)
 			if !res.Pass {

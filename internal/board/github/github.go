@@ -175,6 +175,7 @@ func (b *Board) fetch(ctx context.Context) error {
 			if n.FieldValueByName != nil {
 				c.Status = n.FieldValueByName.Name
 			}
+			c.Assignees = make([]string, 0, len(n.Content.Assignees.Nodes))
 			for _, a := range n.Content.Assignees.Nodes {
 				c.Assignees = append(c.Assignees, a.Login)
 			}
@@ -227,6 +228,19 @@ func (b *Board) Assign(ctx context.Context, card board.Card, login string) error
 	path := fmt.Sprintf("repos/%s/issues/%d/assignees", card.Repo, card.Number)
 	if err := b.post(ctx, path, map[string]any{"assignees": []string{login}}); err != nil {
 		return fmt.Errorf("assign %s to %s: %w", card.Ref(), login, err)
+	}
+	return nil
+}
+
+// Unassign implements board.Board.
+func (b *Board) Unassign(ctx context.Context, card board.Card, login string) error {
+	raw, err := json.Marshal(map[string]any{"assignees": []string{login}})
+	if err != nil {
+		return err
+	}
+	path := fmt.Sprintf("repos/%s/issues/%d/assignees", card.Repo, card.Number)
+	if err := b.rest.DoWithContext(ctx, "DELETE", path, bytes.NewReader(raw), nil); err != nil {
+		return fmt.Errorf("unassign %s from %s: %w", login, card.Ref(), err)
 	}
 	return nil
 }

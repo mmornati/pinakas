@@ -12,8 +12,14 @@ func TestNewRoundsDuration(t *testing.T) {
 	if a.DurationMin != 26 {
 		t.Errorf("DurationMin = %d, want 26", a.DurationMin)
 	}
-	if neg := New("acme/app", 1, start, start.Add(-time.Minute)); neg.DurationMin != 0 {
+	if neg := New("acme/app", 1, start, start.Add(-time.Minute)); neg.DurationMin != 0 || neg.DurationSec != 0 {
 		t.Errorf("negative duration should clamp to 0, got %d", neg.DurationMin)
+	}
+	if quick := New("acme/app", 1, start, start.Add(11*time.Second)); quick.DurationText() != "< 1 min" || quick.DurationSec != 11 {
+		t.Errorf("11 s = %q (%d s)", quick.DurationText(), quick.DurationSec)
+	}
+	if a.DurationText() != "26 min" {
+		t.Errorf("DurationText = %q", a.DurationText())
 	}
 }
 

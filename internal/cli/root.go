@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,8 +20,19 @@ import (
 	"github.com/mmornati/pinakas/internal/state"
 )
 
-// Version is set at build time with -ldflags "-X .../cli.Version=v0.1.0".
-var Version = "dev"
+// Version is set at build time with -ldflags "-X .../cli.Version=0.2.1".
+// Without it, the module version recorded by `go install ...@vX.Y.Z` is used.
+var Version = ""
+
+func version() string {
+	if Version != "" {
+		return Version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return "dev"
+}
 
 // App holds what every command needs. Tests replace the factories.
 type App struct {
@@ -88,7 +101,7 @@ func (app *App) rootCommand() *cobra.Command {
 		Use:           "pinakas",
 		Short:         "Keep AI coding agents on the board",
 		Long:          "pinakas makes a Kanban board the single source of truth for human + agent teams: agents claim cards, move them and record actuals, and hooks block the steps they try to skip.",
-		Version:       Version,
+		Version:       version(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}

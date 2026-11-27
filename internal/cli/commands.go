@@ -201,14 +201,18 @@ func (app *App) status(cmd *cobra.Command, out io.Writer, asJSON, hook, mine boo
 		}
 		fmt.Fprintf(w, "%s (%d)\n", name, len(group))
 		for _, c := range group {
-			fmt.Fprintf(w, "  %s\t%s\t%s\n", c.Ref(), c.Title, strings.Join(c.Assignees, ","))
+			if len(c.Assignees) == 0 {
+				fmt.Fprintf(w, "  %s\t%s\n", c.Ref(), c.Title)
+			} else {
+				fmt.Fprintf(w, "  %s\t%s\t%s\n", c.Ref(), c.Title, strings.Join(c.Assignees, ","))
+			}
 		}
 	}
 	if err := w.Flush(); err != nil {
 		return err
 	}
 	if st.Current != nil {
-		fmt.Fprintf(out, "\nClaimed here: %s#%d %s (since %s)\n", st.Current.Repo, st.Current.Number, st.Current.Title, st.Current.ClaimedAt.Local().Format(time.DateTime))
+		fmt.Fprintf(out, "\nClaimed here: %s#%d %s (since %s)\n", st.Current.Repo, st.Current.Number, st.Current.Title, st.Current.ClaimedAt.Local().Format("2006-01-02 15:04 MST"))
 	}
 	return nil
 }
@@ -421,7 +425,7 @@ func (app *App) actualsCommand() *cobra.Command {
 			if err := ws.store.Save(st); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Recorded actuals on %s#%d: %d min.\n", c.Repo, c.Number, a.DurationMin)
+			fmt.Fprintf(cmd.OutOrStdout(), "Recorded actuals on %s#%d: %s.\n", c.Repo, c.Number, a.DurationText())
 			return nil
 		},
 	}
@@ -435,9 +439,10 @@ func (app *App) actualsCommand() *cobra.Command {
 
 func (app *App) releaseCommand() *cobra.Command {
 	var to string
+	var keepAssignee bool
 	cmd := &cobra.Command{
 		Use:   "release",
-		Short: "Drop the claim in this working tree without recording actuals",
+		Short: "Drop the claim in this working tree without recording actuals, and unassign yourself",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ws, err := app.workspace()
 			if err != nil {
@@ -452,25 +457,42 @@ func (app *App) releaseCommand() *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), "Nothing is claimed here.")
 				return nil
 			}
-			if to != "" {
+			done := []string{}
+			unassign := c.ClaimedBy != "" && !keepAssignee
+			if to != "" || unassign {
 				b, err := app.board(ws)
 				if err != nil {
 					return err
 				}
 				card := board.Card{ItemID: c.ItemID, Repo: c.Repo, Number: c.Number}
-				if err := b.Move(cmd.Context(), card, ws.cfg.Column(to)); err != nil {
-					return err
+				if unassign {
+					if err := b.Unassign(cmd.Context(), card, c.ClaimedBy); err != nil {
+						return err
+					}
+					done = append(done, "unassigned "+c.ClaimedBy)
+				}
+				if to != "" {
+					column := ws.cfg.Column(to)
+					if err := b.Move(cmd.Context(), card, column); err != nil {
+						return err
+					}
+					done = append(done, fmt.Sprintf("moved to %q", column))
 				}
 			}
 			st.Current = nil
 			if err := ws.store.Save(st); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Released %s#%d.\n", c.Repo, c.Number)
+			msg := fmt.Sprintf("Released %s#%d", c.Repo, c.Number)
+			if len(done) > 0 {
+				msg += ": " + strings.Join(done, ", ")
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), msg+".")
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&to, "to", "", "also move the card to this column (e.g. ready)")
+	cmd.Flags().BoolVar(&keepAssignee, "keep-assignee", false, "keep yourself assigned to the card")
 	return cmd
 }
 

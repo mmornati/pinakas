@@ -2,6 +2,7 @@ package pr
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -157,17 +158,17 @@ func TestSyncMergeFallsBackToAssignment(t *testing.T) {
 func TestCheck(t *testing.T) {
 	cfg, ctx := testConfig(), context.Background()
 
-	res, err := Check(ctx, cfg, newFake(), event("opened", "no link"))
-	if err != nil || res.Pass || !strings.Contains(res.Lines[0], "closes no issue") {
-		t.Errorf("no link: %+v, %v", res, err)
+	res := Check(ctx, cfg, newFake(), event("opened", "no link"))
+	if res.Pass || !strings.Contains(res.Lines[0], "closes no issue") {
+		t.Errorf("no link: %+v", res)
 	}
 
-	res, _ = Check(ctx, cfg, newFake(), event("opened", "Closes #40"))
+	res = Check(ctx, cfg, newFake(), event("opened", "Closes #40"))
 	if res.Pass || !strings.Contains(strings.Join(res.Lines, "\n"), "not on the board") {
 		t.Errorf("unknown issue: %+v", res)
 	}
 
-	res, _ = Check(ctx, cfg, newFake(), event("opened", "Closes #7"))
+	res = Check(ctx, cfg, newFake(), event("opened", "Closes #7"))
 	if res.Pass || !strings.Contains(strings.Join(res.Lines, "\n"), "no actuals") {
 		t.Errorf("missing actuals: %+v", res)
 	}
@@ -176,7 +177,7 @@ func TestCheck(t *testing.T) {
 	a := actuals.New("acme/app", 7, time.Now(), time.Now())
 	body, _ := a.Comment()
 	b.IssueNotes = map[string][]string{"acme/app#7": {body}}
-	res, _ = Check(ctx, cfg, b, event("opened", "Closes #7"))
+	res = Check(ctx, cfg, b, event("opened", "Closes #7"))
 	if !res.Pass {
 		t.Errorf("linked card with actuals should pass: %+v", res)
 	}
@@ -185,7 +186,7 @@ func TestCheck(t *testing.T) {
 	risky.PullRequest.Labels = append(risky.PullRequest.Labels, struct {
 		Name string `json:"name"`
 	}{Name: "risk:high"})
-	res, _ = Check(ctx, cfg, b, risky)
+	res = Check(ctx, cfg, b, risky)
 	if res.Pass || !strings.Contains(strings.Join(res.Lines, "\n"), "needs an approving review") {
 		t.Errorf("risky without approval: %+v", res)
 	}
@@ -193,23 +194,23 @@ func TestCheck(t *testing.T) {
 		{Login: "agent-bot", State: "APPROVED"},
 		{Login: "copilot", Bot: true, State: "APPROVED"},
 	}}
-	if res, _ = Check(ctx, cfg, b, risky); res.Pass {
+	if res = Check(ctx, cfg, b, risky); res.Pass {
 		t.Errorf("self and bot approvals must not count: %+v", res)
 	}
 	b.ReviewList["acme/app#21"] = append(b.ReviewList["acme/app#21"], board.Review{Login: "marco", State: "APPROVED"})
-	if res, _ = Check(ctx, cfg, b, risky); !res.Pass || !strings.Contains(strings.Join(res.Lines, "\n"), "approved by marco") {
+	if res = Check(ctx, cfg, b, risky); !res.Pass || !strings.Contains(strings.Join(res.Lines, "\n"), "approved by marco") {
 		t.Errorf("human approval should pass: %+v", res)
 	}
 
 	bot := event("opened", "bump deps")
 	bot.PullRequest.User.Login = "dependabot[bot]"
-	if res, _ = Check(ctx, cfg, newFake(), bot); !res.Pass {
+	if res = Check(ctx, cfg, newFake(), bot); !res.Pass {
 		t.Errorf("exempt author should pass: %+v", res)
 	}
 
 	relaxed := testConfig()
 	relaxed.Rules.RequireLinkedIssue, relaxed.Rules.RequireActualsOnPR = false, false
-	if res, _ = Check(ctx, relaxed, newFake(), event("opened", "no link")); !res.Pass {
+	if res = Check(ctx, relaxed, newFake(), event("opened", "no link")); !res.Pass {
 		t.Errorf("relaxed rules should pass: %+v", res)
 	}
 }
@@ -219,5 +220,36 @@ func TestHuman(t *testing.T) {
 		if got := human(in); got != want {
 			t.Errorf("human(%d) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestCheckReportsAPIErrorsAsFailures(t *testing.T) {
+	cfg, ctx := testConfig(), context.Background()
+	b := newFake()
+	a := actuals.New("acme/app", 7, time.Now(), time.Now())
+	body, _ := a.Comment()
+	b.IssueNotes = map[string][]string{"acme/app#7": {body}}
+	b.ReviewsErr = errors.New("HTTP 404: Not Found")
+
+	risky := event("opened", "Closes #7")
+	risky.PullRequest.Labels = append(risky.PullRequest.Labels, struct {
+		Name string `json:"name"`
+	}{Name: "risk:high"})
+	res := Check(ctx, cfg, b, risky)
+	all := strings.Join(res.Lines, "\n")
+	if res.Pass || !strings.Contains(all, "reviews could not be read: HTTP 404") || !strings.Contains(all, "has actuals") {
+		t.Errorf("API error should fail with the other results kept: %+v", res)
+	}
+}
+
+func TestTimingClaimedAfterPR(t *testing.T) {
+	opened := time.Date(2026, 11, 27, 10, 0, 0, 0, time.UTC)
+	tm := NewTiming(IssueRef{Repo: "acme/app", Number: 7}, 3, opened.Add(20*time.Minute), opened, opened.Add(time.Hour))
+	if tm.BuildMin != nil || !tm.ClaimedAfterPR || *tm.LeadTimeMin != 40 || tm.ReviewMin != 60 {
+		t.Fatalf("timing = %+v", tm)
+	}
+	body, _ := tm.Comment()
+	if strings.Contains(body, "Claim to pull request") || !strings.Contains(body, "claimed after the pull request was opened") {
+		t.Errorf("comment = %s", body)
 	}
 }
