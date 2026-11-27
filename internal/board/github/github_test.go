@@ -124,3 +124,51 @@ func TestRESTCalls(t *testing.T) {
 		t.Errorf("Comment: %v, %s %s %s", err, rest.method, rest.path, rest.body)
 	}
 }
+
+type scriptedREST struct {
+	responses map[string]string
+}
+
+func (s *scriptedREST) DoWithContext(_ context.Context, _ string, path string, _ io.Reader, resp any) error {
+	body, ok := s.responses[path]
+	if !ok {
+		body = "[]"
+	}
+	return json.Unmarshal([]byte(body), resp)
+}
+
+func TestCommentsEventsReviews(t *testing.T) {
+	rest := &scriptedREST{responses: map[string]string{
+		"repos/acme/app/issues/7/comments?per_page=100&page=1": `[{"body":"a"},{"body":"b"}]`,
+		"repos/acme/app/issues/7/events?per_page=100&page=1":   `[{"event":"labeled","created_at":"2026-11-27T08:00:00Z"},{"event":"assigned","created_at":"2026-11-27T09:00:00Z"},{"event":"assigned","created_at":"2026-11-27T10:00:00Z"}]`,
+		"repos/acme/app/pulls/9/reviews?per_page=100&page=1": `[
+		  {"state":"CHANGES_REQUESTED","user":{"login":"marco","type":"User"}},
+		  {"state":"APPROVED","user":{"login":"marco","type":"User"}},
+		  {"state":"COMMENTED","user":{"login":"marco","type":"User"}},
+		  {"state":"COMMENTED","user":{"login":"copilot","type":"Bot"}}]`,
+	}}
+	b := NewWithClients(&fakeGQL{}, rest, "acme", 3, "Status")
+	ctx := context.Background()
+
+	comments, err := b.Comments(ctx, "acme/app", 7)
+	if err != nil || strings.Join(comments, ",") != "a,b" {
+		t.Errorf("Comments = %v, %v", comments, err)
+	}
+	at, err := b.FirstAssignedAt(ctx, "acme/app", 7)
+	if err != nil || at.Hour() != 9 {
+		t.Errorf("FirstAssignedAt = %v, %v", at, err)
+	}
+	if at, _ := b.FirstAssignedAt(ctx, "acme/app", 8); !at.IsZero() {
+		t.Errorf("never assigned should be zero, got %v", at)
+	}
+	reviews, err := b.Reviews(ctx, "acme/app", 9)
+	if err != nil || len(reviews) != 2 {
+		t.Fatalf("Reviews = %+v, %v", reviews, err)
+	}
+	if reviews[0].State != "APPROVED" || reviews[0].Bot {
+		t.Errorf("marco's latest state should stay APPROVED, got %+v", reviews[0])
+	}
+	if !reviews[1].Bot {
+		t.Errorf("copilot should be a bot, got %+v", reviews[1])
+	}
+}

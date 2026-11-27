@@ -101,6 +101,8 @@ func (app *App) rootCommand() *cobra.Command {
 		app.releaseCommand(),
 		app.checkPRCommand(),
 		app.checkStopCommand(),
+		app.syncPRCommand(),
+		app.checkCICommand(),
 	)
 	return root
 }

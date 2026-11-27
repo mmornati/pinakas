@@ -18,8 +18,11 @@ func TestParseAppliesDefaults(t *testing.T) {
 	if got := cfg.Column(ColumnInProgress); got != "In Progress" {
 		t.Errorf("Column(in_progress) = %q", got)
 	}
-	if !cfg.Rules.RequireClaimBeforePR || !cfg.Rules.RequireActualsBeforeStop {
+	if !cfg.Rules.RequireClaimBeforePR || !cfg.Rules.RequireActualsBeforeStop || !cfg.Rules.RequireLinkedIssue || !cfg.Rules.RequireActualsOnPR {
 		t.Error("rules should default to enabled")
+	}
+	if len(cfg.Rules.ApprovalLabels) != 1 || cfg.Rules.ApprovalLabels[0] != "risk:high" {
+		t.Errorf("ApprovalLabels = %v", cfg.Rules.ApprovalLabels)
 	}
 }
 
@@ -67,5 +70,15 @@ func TestFindWalksUp(t *testing.T) {
 	}
 	if _, err := Find(t.TempDir()); err == nil {
 		t.Error("expected ErrNotFound in an empty tree")
+	}
+}
+
+func TestParseReplacesLists(t *testing.T) {
+	cfg, err := Parse([]byte("board:\n  owner: acme\n  project: 3\nrules:\n  approval_labels: [risk:high, risk:medium]\n  exempt_authors: []\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Rules.ApprovalLabels) != 2 || len(cfg.Rules.ExemptAuthors) != 0 {
+		t.Errorf("rules = %+v", cfg.Rules)
 	}
 }

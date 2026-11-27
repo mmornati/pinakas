@@ -52,6 +52,18 @@ type Rules struct {
 	// RequireActualsBeforeStop blocks the agent from stopping while a
 	// claimed card has no actuals recorded.
 	RequireActualsBeforeStop bool `yaml:"require_actuals_before_stop"`
+	// RequireLinkedIssue fails the CI check when a pull request closes no
+	// card of the board.
+	RequireLinkedIssue bool `yaml:"require_linked_issue"`
+	// RequireActualsOnPR fails the CI check while a linked card has no
+	// actuals comment.
+	RequireActualsOnPR bool `yaml:"require_actuals_on_pr"`
+	// ApprovalLabels lists pull request labels (risk classes) that need an
+	// approving review from a human other than the author.
+	ApprovalLabels []string `yaml:"approval_labels"`
+	// ExemptAuthors skips the CI check for these pull request authors,
+	// such as dependency bots.
+	ExemptAuthors []string `yaml:"exempt_authors"`
 }
 
 // Default returns a configuration with sensible defaults.
@@ -70,6 +82,10 @@ func Default() Config {
 		Rules: Rules{
 			RequireClaimBeforePR:     true,
 			RequireActualsBeforeStop: true,
+			RequireLinkedIssue:       true,
+			RequireActualsOnPR:       true,
+			ApprovalLabels:           []string{"risk:high"},
+			ExemptAuthors:            []string{"dependabot[bot]", "renovate[bot]"},
 		},
 	}
 }

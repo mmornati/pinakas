@@ -20,6 +20,7 @@ import (
 	"github.com/mmornati/pinakas/internal/config"
 	"github.com/mmornati/pinakas/internal/hooks"
 	"github.com/mmornati/pinakas/internal/state"
+	"github.com/mmornati/pinakas/internal/templates"
 )
 
 const configTemplate = `# pinakas configuration — https://github.com/mmornati/pinakas
@@ -45,61 +46,115 @@ rules:
   require_claim_before_pr: true
   # Block the agent from stopping while its card has no actuals.
   require_actuals_before_stop: true
+  # Required CI check (pinakas check-ci):
+  # the pull request must close a card of the board ("Closes #N")...
+  require_linked_issue: true
+  # ...the card must have actuals...
+  require_actuals_on_pr: true
+  # ...and these labels (risk classes) need a human approval.
+  approval_labels: ["risk:high"]
+  # Authors skipped by the check, such as dependency bots.
+  exempt_authors: ["dependabot[bot]", "renovate[bot]"]
 `
 
 func (app *App) initCommand() *cobra.Command {
 	var owner, repo string
 	var project int
+	var copilot, workflow bool
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Write a .pinakas.yml in the current directory",
+		Short: "Write .pinakas.yml, and optionally the Copilot hooks and the GitHub workflow",
+		Long: "Write .pinakas.yml in the current directory. --copilot adds .github/hooks/pinakas.json for GitHub Copilot, " +
+			"--workflow adds .github/workflows/pinakas.yml for the board sync and the required check. Existing files are never overwritten.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			out := cmd.OutOrStdout()
 			path := filepath.Join(app.Dir, config.FileName)
 			if _, err := os.Stat(path); err == nil {
-				return fmt.Errorf("%s already exists", config.FileName)
+				if !copilot && !workflow {
+					return fmt.Errorf("%s already exists", config.FileName)
+				}
+				fmt.Fprintf(out, "Kept the existing %s.\n", config.FileName)
+			} else {
+				content := fmt.Sprintf(configTemplate, owner, project, repo)
+				if _, err := config.Parse([]byte(content)); err != nil {
+					return fmt.Errorf("%w (pass --owner and --project)", err)
+				}
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					return err
+				}
+				fmt.Fprintf(out, "Wrote %s. Check the column names against your board, then run `pinakas status`.\n", config.FileName)
 			}
-			content := fmt.Sprintf(configTemplate, owner, project, repo)
-			if _, err := config.Parse([]byte(content)); err != nil {
-				return fmt.Errorf("%w (pass --owner and --project)", err)
+			extras := []struct {
+				on   bool
+				path string
+				body []byte
+				next string
+			}{
+				{copilot, filepath.Join(".github", "hooks", "pinakas.json"), templates.CopilotHooks, "Copilot loads it at the next session; the cloud agent needs pinakas installed in copilot-setup-steps.yml."},
+				{workflow, filepath.Join(".github", "workflows", "pinakas.yml"), templates.Workflow, "Add the PINAKAS_TOKEN secret, then make \"pinakas / check\" a required check."},
 			}
-			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-				return err
+			for _, e := range extras {
+				if !e.on {
+					continue
+				}
+				full := filepath.Join(app.Dir, e.path)
+				if _, err := os.Stat(full); err == nil {
+					fmt.Fprintf(out, "Kept the existing %s.\n", e.path)
+					continue
+				}
+				if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+					return err
+				}
+				if err := os.WriteFile(full, e.body, 0o644); err != nil {
+					return err
+				}
+				fmt.Fprintf(out, "Wrote %s. %s\n", e.path, e.next)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Wrote %s. Check the column names against your board, then run `pinakas status`.\n", config.FileName)
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&owner, "owner", "", "user or organization that owns the project")
 	cmd.Flags().IntVar(&project, "project", 0, "GitHub Project number")
 	cmd.Flags().StringVar(&repo, "repo", "", "default repository (owner/name)")
+	cmd.Flags().BoolVar(&copilot, "copilot", false, "also write .github/hooks/pinakas.json for GitHub Copilot")
+	cmd.Flags().BoolVar(&workflow, "workflow", false, "also write .github/workflows/pinakas.yml")
 	return cmd
 }
 
 func (app *App) statusCommand() *cobra.Command {
 	var asJSON, hook, mine bool
+	var format string
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show the board and the card claimed in this working tree",
 		Long:  "Show the board grouped by column. With --hook, print a short context block for a SessionStart hook and never fail.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			err := app.status(cmd, asJSON, hook, mine)
-			if err != nil && hook {
-				if errors.Is(err, config.ErrNotFound) {
-					return nil // not a pinakas repository: stay silent
-				}
-				fmt.Fprintf(cmd.OutOrStdout(), "pinakas: board unavailable (%v). Do not rely on notes about card status; retry `pinakas status`.\n", err)
-				return nil
+			if err := checkFormat(format); err != nil {
+				return err
 			}
-			return err
+			if !hook {
+				return app.status(cmd, cmd.OutOrStdout(), asJSON, false, mine)
+			}
+			var buf strings.Builder
+			err := app.status(cmd, &buf, asJSON, true, mine)
+			if errors.Is(err, config.ErrNotFound) {
+				return nil // not a pinakas repository: stay silent
+			}
+			if err != nil {
+				buf.Reset()
+				fmt.Fprintf(&buf, "pinakas: board unavailable (%v). Do not rely on notes about card status; retry `pinakas status`.\n", err)
+			}
+			return writeContext(cmd.OutOrStdout(), format, buf.String())
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print cards as JSON")
 	cmd.Flags().BoolVar(&hook, "hook", false, "print context for a SessionStart hook")
 	cmd.Flags().BoolVar(&mine, "mine", false, "only cards assigned to me")
+	addFormatFlag(cmd, &format)
 	return cmd
 }
 
-func (app *App) status(cmd *cobra.Command, asJSON, hook, mine bool) error {
+func (app *App) status(cmd *cobra.Command, out io.Writer, asJSON, hook, mine bool) error {
 	ws, err := app.workspace()
 	if err != nil {
 		return err
@@ -125,7 +180,6 @@ func (app *App) status(cmd *cobra.Command, asJSON, hook, mine bool) error {
 	if err != nil {
 		return err
 	}
-	out := cmd.OutOrStdout()
 	if asJSON {
 		enc := json.NewEncoder(out)
 		enc.SetIndent("", "  ")
@@ -421,12 +475,16 @@ func (app *App) releaseCommand() *cobra.Command {
 }
 
 func (app *App) checkPRCommand() *cobra.Command {
-	return &cobra.Command{
+	var format string
+	cmd := &cobra.Command{
 		Use:   "check-pr",
 		Short: "Hook: block `gh pr create` unless the claimed card is in progress and assigned",
-		Long:  "Reads a PreToolUse hook payload on stdin. Exits 2 with the reason on stderr to block; exits 0 otherwise.",
+		Long:  "Reads a PreToolUse (Claude Code) or preToolUse (Copilot) payload on stdin. Claude Code format: exits 2 with the reason on stderr to block. Copilot format: prints a deny decision as JSON.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := checkFormat(format); err != nil {
+				return err
+			}
 			in, err := hooks.ParseInput(cmd.InOrStdin())
 			if err != nil {
 				return app.hookWarning(err)
@@ -449,9 +507,11 @@ func (app *App) checkPRCommand() *cobra.Command {
 			if c := st.Current; c != nil {
 				status = app.liveStatus(cmd.Context(), ws, c)
 			}
-			return verdict(hooks.CheckPR(ws.cfg, in, st, status))
+			return verdict(cmd.OutOrStdout(), format, preToolUse, hooks.CheckPR(ws.cfg, in, st, status))
 		},
 	}
+	addFormatFlag(cmd, &format)
+	return cmd
 }
 
 // liveStatus asks the board for the claimed card; nil when unreachable.
@@ -476,12 +536,16 @@ func (app *App) liveStatus(ctx context.Context, ws *workspace, c *state.Claim) *
 }
 
 func (app *App) checkStopCommand() *cobra.Command {
-	return &cobra.Command{
+	var format string
+	cmd := &cobra.Command{
 		Use:   "check-stop",
 		Short: "Hook: block stopping while the claimed card has no actuals",
-		Long:  "Reads a Stop hook payload on stdin. Exits 2 with the reason on stderr to block; exits 0 otherwise.",
+		Long:  "Reads a Stop (Claude Code) or agentStop (Copilot) payload on stdin. Claude Code format: exits 2 with the reason on stderr to block. Copilot format: prints a block decision as JSON.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := checkFormat(format); err != nil {
+				return err
+			}
 			in, err := hooks.ParseInput(cmd.InOrStdin())
 			if err != nil {
 				return app.hookWarning(err)
@@ -497,21 +561,16 @@ func (app *App) checkStopCommand() *cobra.Command {
 			if err != nil {
 				return app.hookWarning(err)
 			}
-			return verdict(hooks.CheckStop(ws.cfg, in, st))
+			return verdict(cmd.OutOrStdout(), format, stopEvent, hooks.CheckStop(ws.cfg, in, st))
 		},
 	}
+	addFormatFlag(cmd, &format)
+	return cmd
 }
 
 // hookWarning reports a problem without blocking the agent: a broken
 // guardrail must never stop all work.
 func (app *App) hookWarning(err error) error {
 	fmt.Fprintln(app.Stderr, "pinakas: hook skipped:", err)
-	return nil
-}
-
-func verdict(d hooks.Decision) error {
-	if d.Block {
-		return &exitError{code: blockedExitCode, msg: d.Reason}
-	}
 	return nil
 }

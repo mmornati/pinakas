@@ -1,0 +1,36 @@
+# pinakas: keep the board in sync with pull requests and enforce the workflow.
+# Make "pinakas / check" a required status check in your branch protection.
+# PINAKAS_TOKEN must reach the GitHub Project: a classic PAT with the
+# "project" and "repo" scopes, or a GitHub App token. GITHUB_TOKEN cannot
+# read projects owned by a user.
+name: pinakas
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, ready_for_review, converted_to_draft, synchronize, labeled, unlabeled, closed]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: mmornati/pinakas@v0.2.0
+        with:
+          command: sync-pr
+          token: ${{ secrets.PINAKAS_TOKEN }}
+
+  check:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: mmornati/pinakas@v0.2.0
+        with:
+          command: check-ci
+          token: ${{ secrets.PINAKAS_TOKEN }}

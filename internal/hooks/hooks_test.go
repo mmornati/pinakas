@@ -39,6 +39,17 @@ func TestParseInput(t *testing.T) {
 	if err != nil || in.ToolInput.Command != "gh pr create" || in.ToolName != "Bash" {
 		t.Fatalf("ParseInput = %+v, %v", in, err)
 	}
+	copilot, err := ParseInput(strings.NewReader(`{"timestamp":1704614400000,"cwd":"/tmp","toolName":"bash","toolArgs":"{\"command\":\"gh pr create\"}"}`))
+	if err != nil || copilot.ToolInput.Command != "gh pr create" || copilot.ToolName != "bash" {
+		t.Fatalf("Copilot string toolArgs = %+v, %v", copilot, err)
+	}
+	object, err := ParseInput(strings.NewReader(`{"toolName":"bash","toolArgs":{"command":"ls"}}`))
+	if err != nil || object.ToolInput.Command != "ls" {
+		t.Fatalf("Copilot object toolArgs = %+v, %v", object, err)
+	}
+	if _, err := ParseInput(strings.NewReader(`{"toolName":"edit","toolArgs":"not json"}`)); err != nil {
+		t.Errorf("unparsable toolArgs should be ignored: %v", err)
+	}
 	if _, err := ParseInput(strings.NewReader("")); err != nil {
 		t.Errorf("empty input should be valid: %v", err)
 	}

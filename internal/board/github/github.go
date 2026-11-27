@@ -12,6 +12,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 
@@ -256,4 +257,85 @@ func (b *Board) post(ctx context.Context, path string, payload any) error {
 		return err
 	}
 	return b.rest.DoWithContext(ctx, "POST", path, bytes.NewReader(raw), nil)
+}
+
+// Comments implements board.Board.
+func (b *Board) Comments(ctx context.Context, repo string, number int) ([]string, error) {
+	var bodies []string
+	for page := 1; ; page++ {
+		var comments []struct {
+			Body string `json:"body"`
+		}
+		path := fmt.Sprintf("repos/%s/issues/%d/comments?per_page=100&page=%d", repo, number, page)
+		if err := b.rest.DoWithContext(ctx, "GET", path, nil, &comments); err != nil {
+			return nil, fmt.Errorf("read comments of %s#%d: %w", repo, number, err)
+		}
+		for _, c := range comments {
+			bodies = append(bodies, c.Body)
+		}
+		if len(comments) < 100 {
+			return bodies, nil
+		}
+	}
+}
+
+// FirstAssignedAt implements board.Board.
+func (b *Board) FirstAssignedAt(ctx context.Context, repo string, number int) (time.Time, error) {
+	for page := 1; ; page++ {
+		var events []struct {
+			Event     string    `json:"event"`
+			CreatedAt time.Time `json:"created_at"`
+		}
+		path := fmt.Sprintf("repos/%s/issues/%d/events?per_page=100&page=%d", repo, number, page)
+		if err := b.rest.DoWithContext(ctx, "GET", path, nil, &events); err != nil {
+			return time.Time{}, fmt.Errorf("read events of %s#%d: %w", repo, number, err)
+		}
+		for _, e := range events {
+			if e.Event == "assigned" {
+				return e.CreatedAt, nil
+			}
+		}
+		if len(events) < 100 {
+			return time.Time{}, nil
+		}
+	}
+}
+
+// Reviews implements board.Board.
+func (b *Board) Reviews(ctx context.Context, repo string, number int) ([]board.Review, error) {
+	latest := map[string]board.Review{}
+	var order []string
+	for page := 1; ; page++ {
+		var reviews []struct {
+			State string `json:"state"`
+			User  struct {
+				Login string `json:"login"`
+				Type  string `json:"type"`
+			} `json:"user"`
+		}
+		path := fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100&page=%d", repo, number, page)
+		if err := b.rest.DoWithContext(ctx, "GET", path, nil, &reviews); err != nil {
+			return nil, fmt.Errorf("read reviews of %s#%d: %w", repo, number, err)
+		}
+		for _, r := range reviews {
+			// Comments do not change an earlier approval or change request.
+			if r.State == "COMMENTED" {
+				if _, seen := latest[r.User.Login]; seen {
+					continue
+				}
+			}
+			if _, seen := latest[r.User.Login]; !seen {
+				order = append(order, r.User.Login)
+			}
+			latest[r.User.Login] = board.Review{Login: r.User.Login, Bot: r.User.Type != "User", State: r.State}
+		}
+		if len(reviews) < 100 {
+			break
+		}
+	}
+	out := make([]board.Review, 0, len(order))
+	for _, login := range order {
+		out = append(out, latest[login])
+	}
+	return out, nil
 }

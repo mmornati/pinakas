@@ -31,8 +31,10 @@ else holds it, or this worktree still has an open card.
 gh pr create --fill --body "Closes #42"
 ```
 
-Link the issue with `Closes #42` so the board and CI can follow it.
-Then move the card: `pinakas move 42 review`.
+Link the issue with `Closes #42`: the pinakas GitHub Action moves the card
+to review when the pull request opens, and the required check fails
+without that link. If the repository does not run the Action, move it
+yourself: `pinakas move 42 review`.
 
 ## 4. Record actuals before stopping
 
@@ -44,7 +46,9 @@ pinakas actuals 42 --tokens 120000 --first-pass yes --findings major=0,minor=2
 - `--first-pass`: `yes` if the first review needed no changes.
 - `--findings`: review findings by severity.
 
-Duration is computed from the claim timestamp; do not estimate it.
+Duration is computed from the claim timestamp; do not estimate it. The
+required check `pinakas / check` stays red until the actuals are posted.
+At merge, the Action adds a timing comment measured from timestamps.
 
 If you abandon the card, run `pinakas release --to ready` and say why in an
 issue comment.
