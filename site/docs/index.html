@@ -81,7 +81,7 @@
     </ul>
     <div class="code"><pre>go install github.com/mmornati/pinakas/cmd/pinakas@latest
 gh auth refresh -s project</pre><button class="copy" type="button" data-copy>copy</button></div>
-    <p>Pin a version (for example <code>@v0.3.0</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
+    <p>Pin a version (for example <code>@v0.3.1</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
 
     <h2 id="configure">Configure<a class="anchor" href="#configure">#</a></h2>
     <p>Run <code>pinakas init</code> at the root of the repository. It writes <code>.pinakas.yml</code> and never overwrites a file that already exists.</p>
@@ -131,7 +131,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27.x"
-      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.0</pre><button class="copy" type="button" data-copy>copy</button></div>
+      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.1</pre><button class="copy" type="button" data-copy>copy</button></div>
 
     <h2 id="codex">Codex<a class="anchor" href="#codex">#</a></h2>
     <div class="code"><pre>pinakas init --codex     # writes .codex/hooks.json and .agents/skills/pinakas-*</pre><button class="copy" type="button" data-copy>copy</button></div>
@@ -175,7 +175,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
 
     <h3 id="action-inputs">Using the action directly</h3>
     <div class="code"><pre>- uses: actions/checkout@v7
-- uses: mmornati/pinakas@v0.3.0
+- uses: mmornati/pinakas@v0.3.1
   with:
     command: check-ci        # or sync-pr, report
     token: ${{ secrets.PINAKAS_TOKEN }}</pre><button class="copy" type="button" data-copy>copy</button></div>
@@ -248,6 +248,7 @@ pinakas report --all --format csv > stories.csv
 pinakas report --format markdown           # for a job summary or a PR</pre><button class="copy" type="button" data-copy>copy</button></div>
     <p>The report reads the done column by default and gives, per story and in aggregate: agent time, tokens, first-pass rate, review findings, lead time, review time and defects. A story is delivered at merge, or when its actuals were recorded if there is no merge. Its defects count when found within 30 days of delivery, and the defect rate only uses stories whose 30-day window has ended. The Action can post it weekly with <code>command: report</code>.</p>
     <p>Actuals, timing and defect comments carry a machine-readable marker (<code>&lt;!-- pinakas:actuals … --&gt;</code>, <code>&lt;!-- pinakas:timing … --&gt;</code>, <code>&lt;!-- pinakas:defect … --&gt;</code>) that the report and the CI check parse back.</p>
+    <div class="callout"><p><b>Built-in project workflows.</b> GitHub Projects can close an issue when its item moves to Done. pinakas does not need it, and defects are linked with <code>pinakas defect</code> rather than by reopening the story, so either setting works. Turn the “Auto-close issue” workflow off in the project’s Workflows tab if you want Done to mean “merged” only.</p></div>
 
     <h2 id="fail-open">Fail-open guardrails<a class="anchor" href="#fail-open">#</a></h2>
     <div class="callout"><p><b>A broken guardrail must never stop all work.</b> If the hook input is malformed or the board can’t be reached, pinakas prints a warning and checks only what it can verify locally. Outside a repository with <code>.pinakas.yml</code>, the hooks do nothing.</p></div>

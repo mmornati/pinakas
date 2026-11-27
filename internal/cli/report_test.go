@@ -166,3 +166,51 @@ func TestMinutesText(t *testing.T) {
 		}
 	}
 }
+
+// Findings of the v0.3.0 run on a real board.
+func TestFinishedClaimLifecycle(t *testing.T) {
+	h := newHarness(t, true)
+	h.board.CardList[1].Assignees = nil // card 2 free to claim
+	if code := h.run("", "claim", "1"); code != 0 {
+		t.Fatal(h.stderr)
+	}
+	if code := h.run("", "move", "1", "done"); code != 0 || !strings.Contains(h.stdout.String(), "Still claimed here") {
+		t.Errorf("move done without actuals must keep the claim: %q", h.stdout)
+	}
+	h.now = h.now.Add(20 * time.Second)
+	if code := h.run("", "actuals", "1", "--agent", "codex"); code != 0 || !strings.Contains(h.stdout.String(), "< 1 min") {
+		t.Fatalf("actuals: %q %q", h.stdout, h.stderr)
+	}
+	if code := h.run("", "status"); code != 0 || !strings.Contains(h.stdout.String(), "Last card here: acme/app#1") {
+		t.Errorf("status after actuals: %q", h.stdout)
+	}
+	if code := h.run("", "claim", "2"); code != 0 || !strings.Contains(h.stdout.String(), "No longer tracking acme/app#1 here") {
+		t.Errorf("claim over a finished card must say so: %q %q", h.stdout, h.stderr)
+	}
+	if code := h.run("", "actuals", "2", "--tokens", "10"); code != 0 {
+		t.Fatal(h.stderr)
+	}
+	if code := h.run("", "move", "2", "done"); code != 0 || !strings.Contains(h.stdout.String(), "Claim on acme/app#2 ended") {
+		t.Errorf("move done after actuals must end the claim: %q", h.stdout)
+	}
+	if code := h.run("", "status"); code != 0 || strings.Contains(h.stdout.String(), "acme/app#2 Logout (") {
+		t.Errorf("status after the claim ended: %q", h.stdout)
+	}
+	if code := h.run(prPayload, "check-pr"); code != blockedExitCode || !strings.Contains(h.stderr.String(), "no card is claimed") {
+		t.Errorf("check-pr after the claim ended: code %d, %q", code, h.stderr)
+	}
+
+	h.board.CardList[0].Status, h.board.CardList[1].Status = "Done", "Done"
+	if code := h.run("", "report"); code != 0 {
+		t.Fatal(h.stderr)
+	}
+	out := h.stdout.String()
+	for _, want := range []string{"Agent", "codex", "Median agent time: < 1 min", "Total agent time: < 1 min"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("report misses %q:\n%s", want, out)
+		}
+	}
+	if code := h.run("", "report", "--format", "csv"); code != 0 || !strings.Contains(h.stdout.String(), ",codex,") || !strings.Contains(h.stdout.String(), "duration_sec") {
+		t.Errorf("csv = %q", h.stdout)
+	}
+}

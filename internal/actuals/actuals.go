@@ -52,10 +52,19 @@ func New(repo string, number int, claimedAt, finishedAt time.Time) Actuals {
 // DurationText is the duration for people: "< 1 min" rather than "0 min"
 // for a story that took seconds.
 func (a Actuals) DurationText() string {
-	if a.DurationMin == 0 && a.DurationSec > 0 {
+	if a.DurationMin == 0 {
 		return "< 1 min"
 	}
 	return fmt.Sprintf("%d min", a.DurationMin)
+}
+
+// Minutes is the duration in minutes, to the second when known. Actuals
+// written before duration_sec existed fall back to whole minutes.
+func (a Actuals) Minutes() float64 {
+	if a.DurationSec > 0 {
+		return float64(a.DurationSec) / 60
+	}
+	return float64(a.DurationMin)
 }
 
 // ParseFirstPass accepts yes/no/true/false; an empty string means unknown.
