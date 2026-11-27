@@ -24,6 +24,10 @@ type Timing struct {
 	BuildMin    *int       `json:"build_min,omitempty"`
 	ReviewMin   int        `json:"review_min"`
 	LeadTimeMin *int       `json:"lead_time_min,omitempty"`
+	// ClaimedAfterPR is set when the card was claimed after the pull
+	// request was opened (rework, or a card claimed late): the claim to
+	// pull request step is then left out instead of being shown as 0.
+	ClaimedAfterPR bool `json:"claimed_after_pr,omitempty"`
 }
 
 // NewTiming computes the durations. claimedAt may be zero when unknown.
@@ -39,8 +43,14 @@ func NewTiming(issue IssueRef, prNumber int, claimedAt, openedAt, mergedAt time.
 	}
 	if !claimedAt.IsZero() {
 		c := claimedAt.UTC()
-		build, lead := minutes(claimedAt, openedAt), minutes(claimedAt, mergedAt)
-		t.ClaimedAt, t.BuildMin, t.LeadTimeMin = &c, &build, &lead
+		lead := minutes(claimedAt, mergedAt)
+		t.ClaimedAt, t.LeadTimeMin = &c, &lead
+		if claimedAt.After(openedAt) {
+			t.ClaimedAfterPR = true
+		} else {
+			build := minutes(claimedAt, openedAt)
+			t.BuildMin = &build
+		}
 	}
 	return t
 }
@@ -66,6 +76,9 @@ func (t Timing) Comment() (string, error) {
 		fmt.Fprintf(&b, "| Claim to merge | %s |\n", human(*t.LeadTimeMin))
 	} else {
 		b.WriteString("\nClaim time unknown: the card was never claimed or assigned.\n")
+	}
+	if t.ClaimedAfterPR {
+		b.WriteString("\nThe card was claimed after the pull request was opened, so claim to pull request is not measured.\n")
 	}
 	return b.String(), nil
 }

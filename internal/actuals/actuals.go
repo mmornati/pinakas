@@ -27,6 +27,7 @@ type Actuals struct {
 	ClaimedAt   time.Time      `json:"claimed_at"`
 	FinishedAt  time.Time      `json:"finished_at"`
 	DurationMin int            `json:"duration_min"`
+	DurationSec int            `json:"duration_sec"`
 	Tokens      *int           `json:"tokens,omitempty"`
 	FirstPass   *bool          `json:"first_pass,omitempty"`
 	Findings    map[string]int `json:"findings,omitempty"`
@@ -44,7 +45,17 @@ func New(repo string, number int, claimedAt, finishedAt time.Time) Actuals {
 		ClaimedAt:   claimedAt.UTC(),
 		FinishedAt:  finishedAt.UTC(),
 		DurationMin: max(minutes, 0),
+		DurationSec: max(int(finishedAt.Sub(claimedAt).Seconds()), 0),
 	}
+}
+
+// DurationText is the duration for people: "< 1 min" rather than "0 min"
+// for a story that took seconds.
+func (a Actuals) DurationText() string {
+	if a.DurationMin == 0 && a.DurationSec > 0 {
+		return "< 1 min"
+	}
+	return fmt.Sprintf("%d min", a.DurationMin)
 }
 
 // ParseFirstPass accepts yes/no/true/false; an empty string means unknown.
@@ -98,7 +109,7 @@ func (a Actuals) Comment() (string, error) {
 	b.WriteString("### pinakas actuals\n\n| Field | Value |\n| --- | --- |\n")
 	fmt.Fprintf(&b, "| Claimed | %s |\n", a.ClaimedAt.Format(time.RFC3339))
 	fmt.Fprintf(&b, "| Finished | %s |\n", a.FinishedAt.Format(time.RFC3339))
-	fmt.Fprintf(&b, "| Duration | %d min |\n", a.DurationMin)
+	fmt.Fprintf(&b, "| Duration | %s |\n", a.DurationText())
 	if a.Tokens != nil {
 		fmt.Fprintf(&b, "| Tokens | %d |\n", *a.Tokens)
 	}

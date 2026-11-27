@@ -32,6 +32,8 @@ type Board interface {
 	Move(ctx context.Context, card Card, status string) error
 	// Assign adds the user to the card's assignees.
 	Assign(ctx context.Context, card Card, login string) error
+	// Unassign removes the user from the card's assignees.
+	Unassign(ctx context.Context, card Card, login string) error
 	// Comment adds a comment to the card's issue.
 	Comment(ctx context.Context, card Card, body string) error
 	// CurrentUser returns the login the backend is authenticated as.

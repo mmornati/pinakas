@@ -67,6 +67,9 @@ func TestCardsPaginatesAndSkipsDrafts(t *testing.T) {
 	if len(cards) != 2 {
 		t.Fatalf("got %d cards, want 2: %+v", len(cards), cards)
 	}
+	if cards[0].Assignees == nil {
+		t.Error("assignees should be an empty list, not nil (JSON null)")
+	}
 	if cards[1].Status != "In Progress" || cards[1].Assignees[0] != "agent-bot" {
 		t.Errorf("card 2 = %+v", cards[1])
 	}
@@ -119,6 +122,9 @@ func TestRESTCalls(t *testing.T) {
 	}
 	if err := b.Assign(ctx, card, "agent-bot"); err != nil || rest.path != "repos/acme/app/issues/7/assignees" || !strings.Contains(rest.body, "agent-bot") {
 		t.Errorf("Assign: %v, %s %s", err, rest.path, rest.body)
+	}
+	if err := b.Unassign(ctx, card, "agent-bot"); err != nil || rest.method != "DELETE" || rest.path != "repos/acme/app/issues/7/assignees" || !strings.Contains(rest.body, "agent-bot") {
+		t.Errorf("Unassign: %v, %s %s %s", err, rest.method, rest.path, rest.body)
 	}
 	if err := b.Comment(ctx, card, "hi"); err != nil || rest.method != "POST" || rest.path != "repos/acme/app/issues/7/comments" || rest.body != `{"body":"hi"}` {
 		t.Errorf("Comment: %v, %s %s %s", err, rest.method, rest.path, rest.body)
