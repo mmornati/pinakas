@@ -1,5 +1,5 @@
 {
- "duration": 89.525,
+ "duration": 100.187,
  "scenes": [
   {
    "id": "fast",
@@ -56,22 +56,28 @@
    "end": 71.24
   },
   {
+   "id": "report",
+   "text": "Then pinakas report turns those numbers into answers: agent time, first-pass rate, lead time, and the defects traced back to each story within thirty days.",
+   "start": 71.79,
+   "end": 81.881
+  },
+  {
    "id": "failopen",
    "text": "And guardrails fail open. If the board can't be reached, work goes on.",
-   "start": 71.79,
-   "end": 76.035
+   "start": 82.431,
+   "end": 86.676
   },
   {
    "id": "tools",
-   "text": "pinakas works with Claude Code and GitHub Copilot today. Codex and GitLab are next.",
-   "start": 76.585,
-   "end": 82.196
+   "text": "pinakas works with Claude Code, GitHub Copilot and Codex today. GitLab is next.",
+   "start": 87.226,
+   "end": 92.858
   },
   {
    "id": "cta",
    "text": "pinakas. Keep AI coding agents on the board. Open source, on GitHub.",
-   "start": 82.746,
-   "end": 87.525
+   "start": 93.408,
+   "end": 98.187
   }
  ]
 }
