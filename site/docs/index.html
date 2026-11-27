@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pinakas docs · Install, configure, enforce</title>
+<meta name="description" content="Documentation for pinakas: install the CLI, configure your GitHub Project, wire Claude Code and GitHub Copilot hooks, and add the GitHub Action and required check.">
+<link rel="canonical" href="https://mmornati.github.io/pinakas/docs/">
+<meta property="og:title" content="pinakas docs">
+<meta property="og:image" content="https://mmornati.github.io/pinakas/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400..700&family=Geist+Mono:wght@400..700&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>try{var t=localStorage.getItem('pinakas-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="pinakas home"><b>pinakas</b><span>docs</span></a>
+    <nav class="nav" aria-label="Main">
+      <a class="hide-sm" href="../#film">Film</a>
+      <a href="./" aria-current="page">Docs</a>
+      <a class="gh" href="https://github.com/mmornati/pinakas">GitHub</a>
+      <button class="theme-btn" type="button" aria-label="Toggle dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap docs">
+  <nav class="toc" aria-label="On this page">
+    <p>Start</p>
+    <a href="#overview">Overview</a>
+    <a href="#install">Install</a>
+    <a href="#configure">Configure</a>
+    <p>Agents</p>
+    <a href="#claude-code">Claude Code plugin</a>
+    <a href="#copilot">GitHub Copilot</a>
+    <a href="#workflow-agents">The agent workflow</a>
+    <p>CI</p>
+    <a href="#workflow">Action and required check</a>
+    <a href="#action-inputs">Using the action directly</a>
+    <p>Reference</p>
+    <a href="#commands">Commands</a>
+    <a href="#config-ref">Configuration</a>
+    <a href="#measuring">Measuring</a>
+    <a href="#fail-open">Fail-open guardrails</a>
+    <a href="#faq">FAQ</a>
+    <a href="#develop">Development</a>
+  </nav>
+
+  <main id="main" class="doc">
+    <p class="kicker">Documentation · v0.2</p>
+    <h1>Put the board <em style="color:var(--accent)">in charge.</em></h1>
+    <p class="lede">Everything you need to run human + agent teams from a GitHub Project with pinakas: install, configuration, agent hooks, CI, and the full reference.</p>
+
+    <h2 id="overview">Overview<a class="anchor" href="#overview">#</a></h2>
+    <p><strong>pinakas</strong> (Greek πίνακας, “board”) makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can’t skip a step.</p>
+    <table>
+      <thead><tr><th>Layer</th><th>What it does</th><th>Since</th></tr></thead>
+      <tbody>
+        <tr><td><code>pinakas</code> CLI</td><td>Gives agents write access to the board: <code>claim</code>, <code>move</code>, <code>actuals</code>, <code>status</code>, <code>release</code></td><td>v0.1</td></tr>
+        <tr><td>Agent hooks</td><td>Session start injects the live board, a pre-tool hook blocks <code>gh pr create</code> for an unclaimed card, a stop hook blocks finishing without actuals</td><td>v0.1, Copilot v0.2</td></tr>
+        <tr><td>GitHub Action</td><td>Moves the card when a PR opens, goes back to draft or merges, and records durations from timestamps</td><td>v0.2</td></tr>
+        <tr><td>Required check</td><td>PR closes a card of the board, the card has actuals, risky labels have a human approval</td><td>v0.2</td></tr>
+      </tbody>
+    </table>
+    <p>All logic lives in the CLI. Each agent tool gets a one-line hook that calls it, so there is one implementation to maintain and a few small wiring files.</p>
+
+    <h2 id="install">Install<a class="anchor" href="#install">#</a></h2>
+    <p>Requirements:</p>
+    <ul>
+      <li>Go 1.27 or newer.</li>
+      <li>The <a href="https://cli.github.com">GitHub CLI</a>, signed in, with the <code>project</code> scope.</li>
+      <li>A GitHub Project (v2) with a single-select <code>Status</code> field. The default columns are Ready, In Progress, In Review and Done; any names work once mapped in the configuration.</li>
+    </ul>
+    <div class="code"><pre>go install github.com/mmornati/pinakas/cmd/pinakas@latest
+gh auth refresh -s project</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <p>Pin a version (for example <code>@v0.2.0</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
+
+    <h2 id="configure">Configure<a class="anchor" href="#configure">#</a></h2>
+    <p>Run <code>pinakas init</code> at the root of the repository. It writes <code>.pinakas.yml</code> and never overwrites a file that already exists.</p>
+    <div class="code"><pre>pinakas init --owner &lt;user-or-org&gt; --project &lt;number&gt; --repo &lt;owner/name&gt;
+pinakas status</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <table>
+      <thead><tr><th>Flag</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>--owner</code></td><td>User or organization that owns the project</td></tr>
+        <tr><td><code>--project</code></td><td>GitHub Project number (from its URL)</td></tr>
+        <tr><td><code>--repo</code></td><td>Default repository, <code>owner/name</code></td></tr>
+        <tr><td><code>--copilot</code></td><td>Also write <code>.github/hooks/pinakas.json</code> for GitHub Copilot</td></tr>
+        <tr><td><code>--workflow</code></td><td>Also write <code>.github/workflows/pinakas.yml</code></td></tr>
+      </tbody>
+    </table>
+    <p>Check that the column names in <code>.pinakas.yml</code> match your board, then run <code>pinakas status</code>: you should see your cards grouped by column.</p>
+
+    <h2 id="claude-code">Claude Code plugin<a class="anchor" href="#claude-code">#</a></h2>
+    <p>The plugin ships two skills and three hooks. Inside Claude Code:</p>
+    <div class="code"><pre>/plugin marketplace add mmornati/pinakas
+/plugin install pinakas@pinakas</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <h3>Skills</h3>
+    <ul>
+      <li><strong>pinakas-coordinator</strong>: picks the next ready story, plans from the board, dispatches one card to one implementer per worktree, and reports from the board, never from memory.</li>
+      <li><strong>pinakas-implementer</strong>: claims, builds test-first, opens the PR with <code>Closes #N</code>, and records actuals before stopping.</li>
+    </ul>
+    <h3>Hooks</h3>
+    <table>
+      <thead><tr><th>Event</th><th>Command</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>SessionStart</td><td><code>pinakas status --hook</code></td><td>Injects the live board: what is claimed here, counts per column, ready cards</td></tr>
+        <tr><td>PreToolUse (Bash)</td><td><code>pinakas check-pr</code></td><td>Blocks <code>gh pr create</code> unless the card is claimed here, assigned and in progress</td></tr>
+        <tr><td>Stop</td><td><code>pinakas check-stop</code></td><td>Blocks finishing while the claimed card has no actuals</td></tr>
+      </tbody>
+    </table>
+    <p>A block exits with code 2 and the reason on stderr, which Claude Code shows to the agent so it can correct itself.</p>
+
+    <h2 id="copilot">GitHub Copilot<a class="anchor" href="#copilot">#</a></h2>
+    <div class="code"><pre>pinakas init --copilot   # writes .github/hooks/pinakas.json</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <p>Copilot CLI and the Copilot cloud agent load repository hooks from <code>.github/hooks/</code>. pinakas wires <code>sessionStart</code>, <code>preToolUse</code> and <code>agentStop</code> to the same commands with <code>--format copilot</code>, which answers with a deny or block decision as JSON.</p>
+    <p>The cloud agent also needs <code>pinakas</code> on its path and a token for the board. Install it in <code>.github/workflows/copilot-setup-steps.yml</code> and expose <code>GH_TOKEN</code>:</p>
+    <div class="code"><pre>jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.x"
+      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.2.0</pre><button class="copy" type="button" data-copy>copy</button></div>
+
+    <h2 id="workflow-agents">The agent workflow<a class="anchor" href="#workflow-agents">#</a></h2>
+    <ol>
+      <li><strong>Pick.</strong> <code>pinakas status</code>. Only cards in Ready, whose blockers are done. Prefer the smallest card that unblocks others.</li>
+      <li><strong>Claim.</strong> <code>pinakas claim 42</code> assigns the card, moves it to In Progress and starts the clock. One card per worktree.</li>
+      <li><strong>Build.</strong> Tests first, then code. Stay in the card’s scope; new work becomes a new issue.</li>
+      <li><strong>Open the PR.</strong> <code>gh pr create --fill --body "Closes #42"</code>. The Action moves the card to review.</li>
+      <li><strong>Record actuals.</strong> <code>pinakas actuals 42 --tokens 120000 --first-pass yes --findings major=0,minor=2</code>. Duration comes from the claim timestamp; never estimate it.</li>
+      <li><strong>Human merges.</strong> Agents never merge. The card moves to Done and a timing comment is posted.</li>
+    </ol>
+    <div class="callout"><p><b>Abandoning a card?</b> Run <code>pinakas release --to ready</code> and say why in an issue comment, so the board stays honest about blocked work.</p></div>
+
+    <h2 id="workflow">Action and required check<a class="anchor" href="#workflow">#</a></h2>
+    <div class="code"><pre>pinakas init --workflow  # writes .github/workflows/pinakas.yml</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <ol>
+      <li>Create a <code>PINAKAS_TOKEN</code> secret that can reach the project: a classic PAT with the <code>project</code> and <code>repo</code> scopes, or a GitHub App token. <code>GITHUB_TOKEN</code> cannot read projects owned by a user.</li>
+      <li>Make <code>pinakas / check</code> a required status check in the branch protection of your default branch.</li>
+    </ol>
+    <h3>What the workflow does</h3>
+    <table>
+      <thead><tr><th>Pull request event</th><th>Card</th></tr></thead>
+      <tbody>
+        <tr><td>Opened, reopened, ready for review, description edited</td><td>Moved to review</td></tr>
+        <tr><td>Converted to draft</td><td>Moved back to in progress</td></tr>
+        <tr><td>Merged</td><td>Moved to done, timing comment posted (claim to PR, PR to merge, claim to merge)</td></tr>
+        <tr><td>Closed without merge</td><td>Left where it is</td></tr>
+      </tbody>
+    </table>
+    <h3>What the check enforces</h3>
+    <ul>
+      <li>The description closes a card of the board (<code>Closes #42</code>).</li>
+      <li>Every linked card has actuals.</li>
+      <li>A label from <code>rules.approval_labels</code> has an approving review from a human other than the author.</li>
+    </ul>
+    <p>Reviews re-run the check. Secrets are not available to pull requests from forks, so the workflow is meant for branches of the repository itself. Authors in <code>rules.exempt_authors</code> (Dependabot, Renovate) are skipped.</p>
+
+    <h3 id="action-inputs">Using the action directly</h3>
+    <div class="code"><pre>- uses: actions/checkout@v7
+- uses: mmornati/pinakas@v0.2.0
+  with:
+    command: check-ci        # or sync-pr
+    token: ${{ secrets.PINAKAS_TOKEN }}</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <table>
+      <thead><tr><th>Input</th><th>Required</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>command</code></td><td>yes</td><td><code>sync-pr</code> (move cards and record timing) or <code>check-ci</code> (required workflow check)</td></tr>
+        <tr><td><code>token</code></td><td>yes</td><td>Token that can read and write the project and the issues</td></tr>
+        <tr><td><code>version</code></td><td>no</td><td>pinakas version to install; defaults to the ref the action is used at</td></tr>
+        <tr><td><code>working-directory</code></td><td>no</td><td>Directory holding <code>.pinakas.yml</code> (or below it); default <code>.</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands<a class="anchor" href="#commands">#</a></h2>
+    <table>
+      <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>pinakas status [--json|--mine|--hook]</code></td><td>Board grouped by column, plus the card claimed in this working tree</td></tr>
+        <tr><td><code>pinakas claim &lt;issue&gt; [--force]</code></td><td>Assign a Ready card to you, move it to In Progress, start the clock</td></tr>
+        <tr><td><code>pinakas move &lt;issue&gt; &lt;column&gt;</code></td><td>Move a card (<code>ready</code>, <code>in_progress</code>, <code>review</code>, <code>done</code> or a column name)</td></tr>
+        <tr><td><code>pinakas actuals [issue] …</code></td><td>Post the story’s actuals as an issue comment. Flags: <code>--tokens</code>, <code>--first-pass yes|no</code>, <code>--findings major=1,minor=3</code>, <code>--agent</code>, <code>--note</code></td></tr>
+        <tr><td><code>pinakas release [--to ready]</code></td><td>Drop the claim without actuals</td></tr>
+        <tr><td><code>pinakas check-pr</code>, <code>check-stop</code></td><td>Hook entry points, <code>--format claude|copilot</code></td></tr>
+        <tr><td><code>pinakas sync-pr</code>, <code>check-ci</code></td><td>GitHub Action entry points, reading <code>GITHUB_EVENT_PATH</code> (or <code>--event</code>)</td></tr>
+        <tr><td><code>pinakas init</code></td><td>Write <code>.pinakas.yml</code>, the Copilot hooks and the workflow; never overwrites</td></tr>
+      </tbody>
+    </table>
+    <p>Issues can be written <code>42</code>, <code>#42</code> or <code>owner/name#42</code>. The claim is stored inside the git directory, so each worktree (and each parallel agent) tracks its own card and nothing gets committed. <code>--agent</code> defaults to the <code>PINAKAS_AGENT</code> environment variable.</p>
+
+    <h2 id="config-ref">Configuration<a class="anchor" href="#config-ref">#</a></h2>
+    <p><code>.pinakas.yml</code> at the repository root:</p>
+    <div class="code"><pre>board:
+  provider: github
+  owner: acme
+  project: 3
+  repo: acme/app
+  status_field: Status
+  columns:
+    ready: Ready
+    in_progress: In Progress
+    review: In Review
+    done: Done
+rules:
+  require_claim_before_pr: true        <span class="c"># hook: no PR without a claimed card</span>
+  require_actuals_before_stop: true    <span class="c"># hook: no stop without actuals</span>
+  require_linked_issue: true           <span class="c"># check: PR must close a card</span>
+  require_actuals_on_pr: true          <span class="c"># check: linked cards need actuals</span>
+  approval_labels: ["risk:high"]       <span class="c"># check: these labels need a human approval</span>
+  exempt_authors: ["dependabot[bot]", "renovate[bot]"]</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <table>
+      <thead><tr><th>Key</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>board.provider</code></td><td><code>github</code> today; GitLab comes in v0.4</td></tr>
+        <tr><td><code>board.owner</code>, <code>project</code></td><td>Who owns the GitHub Project, and its number</td></tr>
+        <tr><td><code>board.repo</code></td><td>Default repository for bare issue numbers</td></tr>
+        <tr><td><code>board.status_field</code></td><td>The single-select field holding the column</td></tr>
+        <tr><td><code>board.columns.*</code></td><td>Map the four roles to your column names</td></tr>
+        <tr><td><code>rules.*</code></td><td>Turn each guardrail on or off; see comments above</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="measuring">Measuring<a class="anchor" href="#measuring">#</a></h2>
+    <p>Every story records the same fields so that experiments can be compared: timestamped duration (from claim to actuals), tokens, first-pass success and review findings by severity. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports.</p>
+    <p>Actuals and timing comments carry a machine-readable marker (<code>&lt;!-- pinakas:actuals … --&gt;</code>, <code>&lt;!-- pinakas:timing … --&gt;</code>) that the CI check and future reports parse back. Defects found within 30 days and <code>pinakas report</code> come in v0.3.</p>
+
+    <h2 id="fail-open">Fail-open guardrails<a class="anchor" href="#fail-open">#</a></h2>
+    <div class="callout"><p><b>A broken guardrail must never stop all work.</b> If the hook input is malformed or the board can’t be reached, pinakas prints a warning and checks only what it can verify locally. Outside a repository with <code>.pinakas.yml</code>, the hooks do nothing.</p></div>
+
+    <h2 id="faq">FAQ<a class="anchor" href="#faq">#</a></h2>
+    <h3>Can several agents work in parallel?</h3>
+    <p>Yes: give each one its own git worktree. The claim is stored per worktree, and pinakas refuses a second claim in a worktree while the first card has no actuals.</p>
+    <h3>Why can’t I use <code>GITHUB_TOKEN</code>?</h3>
+    <p>It cannot read Projects (v2) owned by a user. Use a classic PAT with <code>project</code> and <code>repo</code>, or a GitHub App token.</p>
+    <h3>Does it work with pull requests from forks?</h3>
+    <p>Not for the Action: secrets are not exposed to fork PRs. The workflow is designed for branches of the repository itself, which is how agents work.</p>
+    <h3>What if my agent tool isn’t supported yet?</h3>
+    <p>Call the same commands from its hook system: <code>pinakas status --hook</code> at start, <code>pinakas check-pr</code> before tools, <code>pinakas check-stop</code> at stop. Codex support is planned for v0.3.</p>
+
+    <h2 id="develop">Development<a class="anchor" href="#develop">#</a></h2>
+    <div class="code"><pre>go test -race ./...
+golangci-lint run</pre><button class="copy" type="button" data-copy>copy</button></div>
+    <p>pinakas is Apache 2.0. Issues and pull requests are welcome on <a href="https://github.com/mmornati/pinakas">GitHub</a>. The background story lives on <a href="https://blog.mornati.net">blog.mornati.net</a>.</p>
+  </main>
+</div>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>pinakas · Apache 2.0</span>
+    <span><a href="../">Home</a> · <a href="https://github.com/mmornati/pinakas">GitHub</a></span>
+  </div>
+</footer>
+<script src="../assets/site.js"></script>
+</body>
+</html>

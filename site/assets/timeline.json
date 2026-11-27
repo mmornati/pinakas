@@ -1,0 +1,77 @@
+{
+ "duration": 89.525,
+ "scenes": [
+  {
+   "id": "fast",
+   "text": "AI coding agents are fast. Run them from a Kanban board, and stories ship three to six times faster than estimated.",
+   "start": 0.6,
+   "end": 8.067
+  },
+  {
+   "id": "drift",
+   "text": "But left alone, agents drift. They forget to move cards. They open pull requests for stories nobody claimed. And they finish without logging what the work really cost.",
+   "start": 8.617,
+   "end": 18.857
+  },
+  {
+   "id": "enforce",
+   "text": "A skill can describe the workflow. It can't enforce it.",
+   "start": 19.407,
+   "end": 22.5
+  },
+  {
+   "id": "meet",
+   "text": "Meet pinakas. Greek for board. It makes your Kanban board the single source of truth for human and agent teams.",
+   "start": 23.05,
+   "end": 29.791
+  },
+  {
+   "id": "claim",
+   "text": "An agent picks a ready card and claims it. pinakas assigns it, moves it to In Progress, and starts the clock.",
+   "start": 30.341,
+   "end": 36.997
+  },
+  {
+   "id": "hooks",
+   "text": "Opening a pull request without a claimed card? The hook blocks it. Stopping without actuals? Blocked too.",
+   "start": 37.547,
+   "end": 43.67
+  },
+  {
+   "id": "actuals",
+   "text": "Every story records the same numbers: duration, tokens, first-pass success, and review findings.",
+   "start": 44.22,
+   "end": 50.684
+  },
+  {
+   "id": "action",
+   "text": "When the pull request opens, the GitHub Action moves the card to review. When it merges, to done, with timing measured from timestamps, not from what the agent reports.",
+   "start": 51.234,
+   "end": 61.645
+  },
+  {
+   "id": "check",
+   "text": "A required check keeps everyone honest. Every pull request closes a card. Every card has actuals. Risky changes need a human approval.",
+   "start": 62.195,
+   "end": 71.24
+  },
+  {
+   "id": "failopen",
+   "text": "And guardrails fail open. If the board can't be reached, work goes on.",
+   "start": 71.79,
+   "end": 76.035
+  },
+  {
+   "id": "tools",
+   "text": "pinakas works with Claude Code and GitHub Copilot today. Codex and GitLab are next.",
+   "start": 76.585,
+   "end": 82.196
+  },
+  {
+   "id": "cta",
+   "text": "pinakas. Keep AI coding agents on the board. Open source, on GitHub.",
+   "start": 82.746,
+   "end": 87.525
+  }
+ ]
+}

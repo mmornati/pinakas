@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pinakas · Keep AI coding agents on the board</title>
+<meta name="description" content="pinakas makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story cost. Hooks and CI checks make sure they can't skip a step.">
+<meta name="theme-color" content="#13110f">
+<link rel="canonical" href="https://mmornati.github.io/pinakas/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="pinakas · Keep AI coding agents on the board">
+<meta property="og:description" content="Skills describe the workflow. pinakas enforces it: claims, blocking hooks, a GitHub Action and a required check for human + agent Kanban.">
+<meta property="og:url" content="https://mmornati.github.io/pinakas/">
+<meta property="og:image" content="https://mmornati.github.io/pinakas/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400..700&family=Geist+Mono:wght@400..700&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>try{var t=localStorage.getItem('pinakas-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="pinakas home"><b>pinakas</b><span>πίνακας · board</span></a>
+    <nav class="nav" aria-label="Main">
+      <a class="hide-sm" href="#film">Film</a>
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#start">Quick start</a>
+      <a href="docs/">Docs</a>
+      <a class="gh" href="https://github.com/mmornati/pinakas"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+      <button class="theme-btn" type="button" aria-label="Toggle dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <p class="kicker">Open source · Go CLI · Claude Code + Copilot</p>
+      <h1 class="display">Keep AI coding agents <em>on the board.</em></h1>
+    </div>
+    <div class="wrap grid">
+      <div>
+        <p class="lede">pinakas makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can’t skip a step.</p>
+        <div class="actions">
+          <a class="btn primary" href="#film"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Watch the 90-second film</a>
+          <a class="btn" href="docs/">Read the docs</a>
+        </div>
+      </div>
+      <div>
+        <figure class="tablet" aria-label="A card moving across the board, claimed by an agent" style="margin:0 0 54px">
+          <div class="col"><b><i></i>Ready</b><div class="tcard me"><small>#42</small>OAuth login</div><div class="tcard"><small>#43</small>Rate limits</div><div class="tcard"><small>#47</small>SSO docs</div></div>
+          <div class="col"><b><i></i>In Progress</b><div class="tcard"><small>#40</small>Webhooks</div></div>
+          <div class="col"><b><i></i>In Review</b></div>
+          <div class="col"><b><i></i>Done</b><div class="tcard"><small>#38</small>Audit log</div><div class="tcard"><small>#36</small>Dark mode</div></div>
+          <figcaption>pinakas claim 42 → review → done</figcaption>
+        </figure>
+        <div class="install">
+          <span class="p">$</span><code id="install-cmd">go install github.com/mmornati/pinakas/cmd/pinakas@latest</code>
+          <button class="copy" type="button" data-copy="#install-cmd">copy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="film-band" id="film" aria-labelledby="film-title">
+    <div class="wrap">
+      <div class="film-head">
+        <div>
+          <p class="kicker">The film · 1:30 · voice-over</p>
+          <h2 id="film-title" style="margin-top:16px">pinakas in ninety seconds.</h2>
+        </div>
+        <p>Drawn live on a canvas, in your browser, frame by frame. Chapters below jump straight to a part.</p>
+      </div>
+      <div class="film" data-film data-timeline="assets/timeline.json" tabindex="0" aria-label="pinakas intro film. Space to play or pause, arrows to seek.">
+        <canvas width="1920" height="1080" role="img" aria-label="Animated presentation of pinakas"></canvas>
+        <button class="big-play" type="button" aria-label="Play the film"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Play with sound</span></button>
+      </div>
+      <audio id="film-audio" src="assets/voiceover.mp3" preload="metadata"></audio>
+      <div class="film-bar">
+        <button id="film-play" type="button" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+        <input id="film-seek" type="range" min="0" max="1000" value="0" aria-label="Seek">
+        <span class="t" id="film-time">0:00 / 1:30</span>
+        <button id="film-cc" type="button" aria-pressed="true" aria-label="Captions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 100 3M16 10.5a2 2 0 100 3"/></svg></button>
+        <button id="film-fs" type="button" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <a class="dl" href="assets/pinakas-intro.mp4" download>MP4 ↓</a>
+      </div>
+      <div class="film-chapters" id="film-chapters" aria-label="Chapters"></div>
+      <p id="film-transcript" class="skip"></p>
+    </div>
+  </section>
+
+  <section class="s" id="why" aria-labelledby="why-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">Why</p>
+          <h2 class="h2" id="why-title">Fast agents, <em>drifting</em> boards.</h2>
+        </div>
+        <p class="lede">Running coding agents from a Kanban board works: stories ship three to six times faster than estimated. But left alone, agents drift, and the board stops telling the truth.</p>
+      </div>
+      <div class="drift rv">
+        <article><div class="x">✕</div><h3>Cards never move</h3><p>The PR merged on Tuesday. The card is still in In Progress, and the coordinator plans around it.</p></article>
+        <article><div class="x">✕</div><h3>PRs nobody claimed</h3><p>An agent opens a pull request for a story it picked on its own, or for no story at all.</p></article>
+        <article><div class="x">✕</div><h3>No record of the cost</h3><p>The session ends without actuals: no duration, no tokens, no review findings. Nothing to learn from.</p></article>
+      </div>
+      <p class="quote rv">A skill can describe the workflow. It can’t enforce it. <em>pinakas does.</em></p>
+    </div>
+  </section>
+
+  <section class="s" id="how" aria-labelledby="how-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">How it works</p>
+          <h2 class="h2" id="how-title">Four layers, <em>one binary.</em></h2>
+        </div>
+        <p class="lede">All the logic lives in the CLI. Each agent tool gets a one-line hook that calls it, so there is one implementation to maintain and a few small wiring files.</p>
+      </div>
+      <div class="layers rv">
+        <div class="layer"><span class="n">i</span><h3><code>pinakas</code> CLI</h3><p>Gives agents write access to the board: <code>claim</code>, <code>move</code>, <code>actuals</code>, <code>status</code>, <code>release</code>. The claim lives in the git directory, so every worktree and every parallel agent tracks its own card.</p><span class="tag ok">v0.1</span></div>
+        <div class="layer"><span class="n">ii</span><h3>Agent hooks</h3><p>Session start injects the live board. A pre-tool hook blocks <code>gh pr create</code> for an unclaimed card. A stop hook blocks finishing without actuals.</p><span class="tag ok">Claude Code · Copilot</span></div>
+        <div class="layer"><span class="n">iii</span><h3>GitHub Action</h3><p>Moves the card when a PR opens, goes back to draft or merges, and posts durations measured from timestamps.</p><span class="tag ok">v0.2</span></div>
+        <div class="layer"><span class="n">iv</span><h3>Required check</h3><p>The PR closes a card of the board, every linked card has actuals, and risky labels carry an approval from a human.</p><span class="tag ok">v0.2</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="s" id="life" aria-labelledby="life-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">The life of a card</p>
+          <h2 class="h2" id="life-title">From <em>Ready</em> to <em>Done</em>, nothing skipped.</h2>
+        </div>
+        <p class="lede">Humans write and order the cards. Agents do the work in between. pinakas keeps both honest at every transition.</p>
+      </div>
+      <ol class="life rv">
+        <li><span class="col"><i style="background:var(--muted)"></i>Ready</span><h3>Pick from the board</h3><p>At session start the hook injects the live board. The coordinator skill hands one ready card to one implementer, in its own worktree.</p><div class="who">pinakas status --hook</div></li>
+        <li><span class="col"><i style="background:var(--accent)"></i>In Progress</span><h3>Claim and start the clock</h3><p>The agent claims the card: it is assigned, moved, and the claim time recorded. No PR can be opened before this.</p><div class="who">pinakas claim 42</div></li>
+        <li><span class="col"><i style="background:var(--warn)"></i>In Review</span><h3>Open the pull request</h3><p>The Action moves the card to review. The required check runs: closes a card, actuals recorded, human approval on risky labels.</p><div class="who">pinakas / check</div></li>
+        <li><span class="col"><i style="background:var(--ok)"></i>Done</span><h3>A human merges</h3><p>The card moves to Done and a timing comment lands on the issue: claim to PR, PR to merge, claim to merge.</p><div class="who">pinakas sync-pr</div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="s" id="guardrails" aria-labelledby="guard-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">Guardrails</p>
+          <h2 class="h2" id="guard-title">Hooks that <em>say no,</em> and say why.</h2>
+        </div>
+        <p class="lede">A blocked agent gets the exact command that unblocks it, so it corrects itself instead of giving up. Claude Code gets exit code 2 and the reason; Copilot gets a deny or block decision as JSON.</p>
+      </div>
+      <div class="terms rv">
+        <div>
+          <div class="term"><div class="bar"><i></i><i></i><i></i><span>PreToolUse · Bash</span></div>
+<pre><span class="p">$</span> gh pr create --fill
+<span class="r">✕ blocked by pinakas check-pr</span>
+<span class="d">pinakas: no card is claimed in this working
+tree. Run `pinakas status` to pick an unblocked
+card, then `pinakas claim &lt;issue&gt;` before
+opening a pull request.</span></pre></div>
+          <p class="term-cap"><b>No PR without a claim.</b> The card must be claimed here, assigned, and in the in-progress column.</p>
+        </div>
+        <div>
+          <div class="term"><div class="bar"><i></i><i></i><i></i><span>Stop</span></div>
+<pre><span class="y">●</span> agent is about to finish
+<span class="r">✕ blocked by pinakas check-stop</span>
+<span class="d">pinakas: card #42 (Add OAuth login) has no
+actuals yet. Record them with `pinakas actuals
+42 --tokens &lt;n&gt; --first-pass=&lt;yes|no&gt;` before
+stopping, or `pinakas release` if abandoned.</span></pre></div>
+          <p class="term-cap"><b>No stop without actuals.</b> Or an explicit release, so abandoned work is visible too.</p>
+        </div>
+      </div>
+      <div class="callout rv" style="margin-top:36px">
+        <p><b>Guardrails fail open.</b> A broken guardrail must never stop all work. If the hook input is malformed or the board can’t be reached, pinakas prints a warning and checks only what it can verify locally. Outside a repository with <code>.pinakas.yml</code>, the hooks do nothing.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="s" id="measure" aria-labelledby="measure-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">Measuring</p>
+          <h2 class="h2" id="measure-title">Every story, <em>the same numbers.</em></h2>
+        </div>
+        <p class="lede">So that experiments can be compared: a new model, a new prompt, a new skill. At merge, the Action adds durations measured from timestamps only, independent of what the agent reports.</p>
+      </div>
+      <div class="metrics rv">
+        <div class="metric"><div class="k">Duration</div><div class="v">47 min</div><p>From claim to actuals, from timestamps.</p></div>
+        <div class="metric"><div class="k">Tokens</div><div class="v">182k</div><p>Reported by the agent with <code>--tokens</code>.</p></div>
+        <div class="metric"><div class="k">First pass</div><div class="v ok">yes</div><p>Did review pass without changes?</p></div>
+        <div class="metric"><div class="k">Findings</div><div class="v">0 · 2</div><p>Review findings by severity: major, minor.</p></div>
+      </div>
+      <div class="code rv" style="margin-top:36px"><pre><span class="c"># recorded as an issue comment with a machine-readable marker the CI check parses back</span>
+pinakas actuals 42 --tokens 182000 --first-pass yes --findings major=0,minor=2</pre><button class="copy" type="button" data-copy>copy</button></div>
+    </div>
+  </section>
+
+  <section class="s" id="start" aria-labelledby="start-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">Quick start</p>
+          <h2 class="h2" id="start-title">On the board in <em>five minutes.</em></h2>
+        </div>
+        <p class="lede">You need Go 1.27+, the GitHub CLI signed in with the <code>project</code> scope, and a GitHub Project (v2) with a single-select <code>Status</code> field.</p>
+      </div>
+      <ol class="steps rv">
+        <li><div><h3>Install the CLI</h3><p>One static binary. The <code>project</code> scope lets it read and move cards.</p>
+          <div class="code"><pre>go install github.com/mmornati/pinakas/cmd/pinakas@latest
+gh auth refresh -s project</pre><button class="copy" type="button" data-copy>copy</button></div></div></li>
+        <li><div><h3>Point it at your board</h3><p>Writes <code>.pinakas.yml</code>. Add <code>--copilot</code> for Copilot hooks and <code>--workflow</code> for the Action and required check.</p>
+          <div class="code"><pre>pinakas init --owner &lt;user-or-org&gt; --project &lt;number&gt; --repo &lt;owner/name&gt;
+pinakas status</pre><button class="copy" type="button" data-copy>copy</button></div></div></li>
+        <li><div><h3>Install the Claude Code plugin</h3><p>Two skills (coordinator, implementer) and three hooks. Then ask your agent to pick the next ready story.</p>
+          <div class="code"><pre>/plugin marketplace add mmornati/pinakas
+/plugin install pinakas@pinakas</pre><button class="copy" type="button" data-copy>copy</button></div></div></li>
+      </ol>
+      <p class="note-line rv">Using GitHub Copilot, or want the board to follow your pull requests? <a href="docs/#copilot">Copilot setup</a> · <a href="docs/#workflow">Action and required check</a></p>
+    </div>
+  </section>
+
+  <section class="s" id="tools" aria-labelledby="tools-title">
+    <div class="wrap">
+      <div class="s-head rv">
+        <div>
+          <p class="kicker">Works with</p>
+          <h2 class="h2" id="tools-title">Your agents, <em>your board.</em></h2>
+        </div>
+        <p class="lede">One CLI, small adapters. New tools and boards plug into the same logic.</p>
+      </div>
+      <div class="tools rv">
+        <div class="tool"><span class="tag ok">today</span><h3>Claude Code</h3><p>Plugin with skills and SessionStart, PreToolUse and Stop hooks.</p></div>
+        <div class="tool"><span class="tag ok">today</span><h3>GitHub Copilot</h3><p>Repository hooks in <code>.github/hooks/</code> for Copilot CLI and the cloud agent.</p></div>
+        <div class="tool"><span class="tag ok">today</span><h3>GitHub Projects</h3><p>Projects v2 boards, owned by a user or an organization.</p></div>
+        <div class="tool"><span class="tag next">v0.3</span><h3>Codex</h3><p>Adapter on the same hook entry points.</p></div>
+        <div class="tool"><span class="tag next">v0.4</span><h3>GitLab</h3><p>Board backend for GitLab issue boards.</p></div>
+        <div class="tool"><span class="tag next">v0.4</span><h3>MCP server</h3><p>The board for any MCP-capable client.</p></div>
+      </div>
+      <ol class="road rv" aria-label="Roadmap">
+        <li class="done"><b>v0.1</b><p>CLI on GitHub Projects, Claude Code plugin with two skills and three hooks.</p></li>
+        <li class="done now"><b>v0.2</b><p>GitHub Action for card moves and durations, required check, Copilot wiring.</p></li>
+        <li><b>v0.3</b><p>Per-story metrics schema, <code>pinakas report</code>, Codex adapter.</p></li>
+        <li><b>v0.4</b><p>GitLab backend, MCP server.</p></li>
+        <li><b>v1.0</b><p>Stable config schema, complete docs, example project, signed releases.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="close" aria-labelledby="close-title">
+    <div class="wrap">
+      <h2 id="close-title">The board is the truth.<br><em>Make agents agree.</em></h2>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/mmornati/pinakas">Star on GitHub</a>
+        <a class="btn" href="docs/">Read the docs</a>
+      </div>
+      <div class="install">
+        <span class="p" style="color:#fff">$</span><code id="install-cmd-2">go install github.com/mmornati/pinakas/cmd/pinakas@latest</code>
+        <button class="copy" type="button" data-copy="#install-cmd-2">copy</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>pinakas · Apache 2.0 · grew out of real human + agent Kanban projects, see <a href="https://blog.mornati.net">blog.mornati.net</a></span>
+    <span><a href="docs/">Docs</a> · <a href="https://github.com/mmornati/pinakas">GitHub</a> · <a href="https://github.com/mmornati/pinakas/issues">Issues</a></span>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+<script src="assets/film.js"></script>
+<script src="assets/player.js"></script>
+</body>
+</html>

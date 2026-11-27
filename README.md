@@ -2,6 +2,8 @@
 
 > Keep AI coding agents on the board.
 
+**[Website, 90-second film and docs →](https://mmornati.github.io/pinakas/)**
+
 **pinakas** (Greek πίνακας, "board") makes a Kanban board the single source of truth for human + agent teams. Agents claim cards, move them and record what each story really cost. Hooks and CI checks make sure they can't skip a step.
 
 ## Why
