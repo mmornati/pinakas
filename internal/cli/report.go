@@ -194,11 +194,11 @@ func encodeIndent(out io.Writer, v any) error {
 
 // row is one story rendered as text cells.
 type row struct {
-	ref, title, delivered, duration, tokens, firstPass, findings, lead, review, defects string
+	ref, title, delivered, duration, tokens, firstPass, findings, agent, lead, review, defects string
 }
 
 func storyRow(s metrics.Story) row {
-	r := row{ref: s.Ref(), title: s.Title, delivered: "-", duration: "-", tokens: "-", firstPass: "-", findings: "-", lead: "-", review: "-"}
+	r := row{ref: s.Ref(), title: s.Title, delivered: "-", duration: "-", tokens: "-", firstPass: "-", findings: "-", agent: "-", lead: "-", review: "-"}
 	if s.DeliveredAt != nil {
 		r.delivered = s.DeliveredAt.Local().Format(time.DateOnly)
 	}
@@ -212,6 +212,9 @@ func storyRow(s metrics.Story) row {
 		}
 		if len(a.Findings) > 0 {
 			r.findings = metrics.FormatFindings(a.Findings)
+		}
+		if a.Agent != "" {
+			r.agent = a.Agent
 		}
 	}
 	if t := s.Timing; t != nil {
@@ -228,10 +231,10 @@ func storyRow(s metrics.Story) row {
 }
 
 func (r row) cells() []string {
-	return []string{r.ref, r.title, r.delivered, r.duration, r.tokens, r.firstPass, r.findings, r.lead, r.review, r.defects}
+	return []string{r.ref, r.title, r.delivered, r.duration, r.tokens, r.firstPass, r.findings, r.agent, r.lead, r.review, r.defects}
 }
 
-var reportHeader = []string{"Story", "Title", "Delivered", "Agent time", "Tokens", "First pass", "Findings", "Lead time", "Review", "Defects 30d"}
+var reportHeader = []string{"Story", "Title", "Delivered", "Agent time", "Tokens", "First pass", "Findings", "Agent", "Lead time", "Review", "Defects 30d"}
 
 func writeTable(out io.Writer, stories []metrics.Story, sum metrics.Summary) error {
 	if len(stories) == 0 {
@@ -280,9 +283,9 @@ func writeMarkdown(out io.Writer, stories []metrics.Story, sum metrics.Summary) 
 
 func writeCSV(out io.Writer, stories []metrics.Story) error {
 	w := csv.NewWriter(out)
-	_ = w.Write([]string{"repo", "number", "title", "status", "delivered_at", "duration_min", "tokens", "first_pass", "findings", "build_min", "review_min", "lead_time_min", "defects_30d", "window_open"})
+	_ = w.Write([]string{"repo", "number", "title", "status", "delivered_at", "duration_min", "tokens", "first_pass", "findings", "agent", "build_min", "review_min", "lead_time_min", "defects_30d", "window_open", "duration_sec"})
 	for _, s := range stories {
-		rec := []string{s.Repo, strconv.Itoa(s.Number), s.Title, s.Status, "", "", "", "", "", "", "", "", strconv.Itoa(s.Defects30), strconv.FormatBool(s.WindowOpen)}
+		rec := []string{s.Repo, strconv.Itoa(s.Number), s.Title, s.Status, "", "", "", "", "", "", "", "", "", strconv.Itoa(s.Defects30), strconv.FormatBool(s.WindowOpen), ""}
 		if s.DeliveredAt != nil {
 			rec[4] = s.DeliveredAt.UTC().Format(time.RFC3339)
 		}
@@ -295,14 +298,18 @@ func writeCSV(out io.Writer, stories []metrics.Story) error {
 				rec[7] = strconv.FormatBool(*a.FirstPass)
 			}
 			rec[8] = metrics.FormatFindings(a.Findings)
+			rec[9] = a.Agent
+			if a.DurationSec > 0 || a.DurationMin == 0 {
+				rec[15] = strconv.Itoa(a.DurationSec)
+			}
 		}
 		if t := s.Timing; t != nil {
 			if t.BuildMin != nil {
-				rec[9] = strconv.Itoa(*t.BuildMin)
+				rec[10] = strconv.Itoa(*t.BuildMin)
 			}
-			rec[10] = strconv.Itoa(t.ReviewMin)
+			rec[11] = strconv.Itoa(t.ReviewMin)
 			if t.LeadTimeMin != nil {
-				rec[11] = strconv.Itoa(*t.LeadTimeMin)
+				rec[12] = strconv.Itoa(*t.LeadTimeMin)
 			}
 		}
 		_ = w.Write(rec)
@@ -330,7 +337,7 @@ func summaryLines(s metrics.Summary) [][2]string {
 	return [][2]string{
 		{"Stories", fmt.Sprintf("%d (%d with actuals)", s.Stories, s.WithActuals)},
 		{"Median agent time", opt(s.MedianDuration, minutesText)},
-		{"Total agent time", minutesText(float64(s.TotalDuration))},
+		{"Total agent time", minutesText(s.TotalDuration)},
 		{"Total tokens", strconv.Itoa(s.TotalTokens)},
 		{"First-pass rate", opt(s.FirstPassRate, pct)},
 		{"Review findings", findings},
@@ -341,11 +348,11 @@ func summaryLines(s metrics.Summary) [][2]string {
 	}
 }
 
-// minutesText renders minutes as "45 min", "2 h 05" or "3 d 4 h".
+// minutesText renders minutes as "< 1 min", "45 min", "2 h 05" or "3 d 4 h".
 func minutesText(m float64) string {
 	total := int(m + 0.5)
 	switch {
-	case total < 1 && m > 0:
+	case m > 0 && m < 1:
 		return "< 1 min"
 	case total < 60:
 		return fmt.Sprintf("%d min", total)

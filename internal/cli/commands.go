@@ -246,8 +246,12 @@ func (app *App) status(cmd *cobra.Command, out io.Writer, asJSON, hook, mine boo
 	if err := w.Flush(); err != nil {
 		return err
 	}
-	if st.Current != nil {
-		fmt.Fprintf(out, "\nClaimed here: %s#%d %s (since %s)\n", st.Current.Repo, st.Current.Number, st.Current.Title, st.Current.ClaimedAt.Local().Format("2006-01-02 15:04 MST"))
+	if c := st.Current; c != nil {
+		if c.Open() {
+			fmt.Fprintf(out, "\nClaimed here: %s#%d %s (since %s, actuals not recorded yet)\n", c.Repo, c.Number, c.Title, c.ClaimedAt.Local().Format("2006-01-02 15:04 MST"))
+		} else {
+			fmt.Fprintf(out, "\nLast card here: %s#%d %s (actuals recorded; nothing claimed)\n", c.Repo, c.Number, c.Title)
+		}
 	}
 	return nil
 }
@@ -354,6 +358,7 @@ func (app *App) claimCommand() *cobra.Command {
 			if err := b.Move(ctx, card, ws.cfg.Column(config.ColumnInProgress)); err != nil {
 				return err
 			}
+			previous := st.Current
 			st.Current = &state.Claim{
 				Repo: card.Repo, Number: card.Number, Title: card.Title, URL: card.URL,
 				ItemID: card.ItemID, ClaimedBy: me, ClaimedAt: app.Now().UTC(),
@@ -361,7 +366,15 @@ func (app *App) claimCommand() *cobra.Command {
 			if err := ws.store.Save(st); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Claimed %s %s: assigned to %s, moved to %q.\n", card.Ref(), card.Title, me, ws.cfg.Column(config.ColumnInProgress))
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Claimed %s %s: assigned to %s, moved to %q.\n", card.Ref(), card.Title, me, ws.cfg.Column(config.ColumnInProgress))
+			if previous != nil && (previous.Repo != card.Repo || previous.Number != card.Number) {
+				why := "its actuals are recorded"
+				if previous.Open() {
+					why = "it had no actuals (--force)"
+				}
+				fmt.Fprintf(out, "No longer tracking %s#%d here: %s.\n", previous.Repo, previous.Number, why)
+			}
 			return nil
 		},
 	}
@@ -391,7 +404,30 @@ func (app *App) moveCommand() *cobra.Command {
 			if err := b.Move(cmd.Context(), card, column); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Moved %s to %q.\n", card.Ref(), column)
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Moved %s to %q.\n", card.Ref(), column)
+			if column != ws.cfg.Column(config.ColumnDone) {
+				return nil
+			}
+			// A finished card leaves the working tree: once its actuals are
+			// recorded, moving it to done ends the claim.
+			st, err := ws.store.Load()
+			if err != nil {
+				return err
+			}
+			c := st.Current
+			if c == nil || !strings.EqualFold(c.Repo, card.Repo) || c.Number != card.Number {
+				return nil
+			}
+			if c.Open() {
+				fmt.Fprintf(out, "Still claimed here: record `pinakas actuals %d` before stopping.\n", c.Number)
+				return nil
+			}
+			st.Current = nil
+			if err := ws.store.Save(st); err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "Claim on %s ended.\n", card.Ref())
 			return nil
 		},
 	}

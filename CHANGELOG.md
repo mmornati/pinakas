@@ -2,6 +2,17 @@
 
 Notable changes to pinakas. Release notes with binaries live on the [releases page](https://github.com/mmornati/pinakas/releases).
 
+## [0.3.1] - 2026-11-27
+
+Fixes from the end-to-end run of v0.3.0 on a real GitHub Project.
+
+- `move <card> done` ends the claim once its actuals are recorded; without actuals it keeps the claim and says so.
+- `status` shows "Last card here … (actuals recorded; nothing claimed)" instead of "Claimed here" for a finished card, like the session hook.
+- `claim` says which finished card it stops tracking instead of replacing it silently.
+- Durations under a minute read `< 1 min`; the report computes medians and totals from seconds, so two quick stories no longer show a 1 min median.
+- `report`: Agent column in the table, Markdown and CSV, and `duration_sec` in the CSV.
+- Docs: GitHub's built-in project workflows can auto-close issues moved to Done.
+
 ## [0.3.0] - 2026-11-27
 
 - `pinakas report`: per-story metrics and a summary from the actuals, timing and defect markers (agent time, tokens, first-pass rate, findings, lead and review time, defects within 30 days), as a table, JSON, CSV or Markdown; `--since`, `--status`/`--all`, `--measured`.
@@ -35,6 +46,7 @@ Fixes found on a real GitHub Project, and prebuilt binaries.
 - Claude Code plugin with the coordinator and implementer skills and the SessionStart, PreToolUse and Stop hooks.
 - Per-worktree claims stored in the git directory.
 
+[0.3.1]: https://github.com/mmornati/pinakas/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mmornati/pinakas/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/mmornati/pinakas/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mmornati/pinakas/releases/tag/v0.2.0

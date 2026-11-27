@@ -121,7 +121,7 @@ type Summary struct {
 	Stories         int            `json:"stories"`
 	WithActuals     int            `json:"with_actuals"`
 	MedianDuration  *float64       `json:"median_duration_min,omitempty"`
-	TotalDuration   int            `json:"total_duration_min"`
+	TotalDuration   float64        `json:"total_duration_min"`
 	TotalTokens     int            `json:"total_tokens"`
 	FirstPassRate   *float64       `json:"first_pass_rate,omitempty"`
 	Findings        map[string]int `json:"findings"`
@@ -140,8 +140,8 @@ func Summarize(stories []Story) Summary {
 	for _, s := range stories {
 		if a := s.Actuals; a != nil {
 			sum.WithActuals++
-			durations = append(durations, float64(a.DurationMin))
-			sum.TotalDuration += a.DurationMin
+			durations = append(durations, a.Minutes())
+			sum.TotalDuration += a.Minutes()
 			if a.Tokens != nil {
 				sum.TotalTokens += *a.Tokens
 			}

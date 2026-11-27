@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: mmornati/pinakas@v0.3.0
+      - uses: mmornati/pinakas@v0.3.1
         with:
           command: sync-pr
           token: ${{ secrets.PINAKAS_TOKEN }}
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: mmornati/pinakas@v0.3.0
+      - uses: mmornati/pinakas@v0.3.1
         with:
           command: check-ci
           token: ${{ secrets.PINAKAS_TOKEN }}

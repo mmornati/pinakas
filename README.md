@@ -102,7 +102,7 @@ Then ask your agent to pick the next ready story.
 pinakas init --copilot   # writes .github/hooks/pinakas.json
 ```
 
-Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.0`) and expose `GH_TOKEN`.
+Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.1`) and expose `GH_TOKEN`.
 
 </details>
 
@@ -212,7 +212,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: mmornati/pinakas@v0.3.0
+      - uses: mmornati/pinakas@v0.3.1
         with:
           command: report
           args: --since 7d
@@ -220,6 +220,9 @@ jobs:
 ```
 
 Actuals, timing and defect comments carry a machine-readable marker that the report and the CI check parse back.
+
+> [!NOTE]
+> GitHub Projects has built-in workflows that close an issue when its item moves to Done. pinakas does not need them, and defects are linked with `pinakas defect` rather than by reopening the story, so either setting works; turn the "Auto-close issue" workflow off in the project's Workflows tab if you want Done to mean "merged" only.
 
 ## Guardrails are fail-open
 
