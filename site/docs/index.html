@@ -45,6 +45,7 @@
     <a href="#workflow">Action and required check</a>
     <a href="#action-inputs">Using the action directly</a>
     <p>Reference</p>
+    <a href="#mcp">MCP server</a>
     <a href="#commands">Commands</a>
     <a href="#config-ref">Configuration</a>
     <a href="#measuring">Measuring</a>
@@ -189,6 +190,15 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
         <tr><td><code>working-directory</code></td><td>no</td><td>Directory holding <code>.pinakas.yml</code> (or below it); default <code>.</code></td></tr>
       </tbody>
     </table>
+
+    <h2 id="mcp">MCP server<a class="anchor" href="#mcp">#</a></h2>
+    <p><code>pinakas mcp</code> serves the board to any MCP client over stdio. Tools: <code>board_status</code>, <code>claim_card</code>, <code>move_card</code>, <code>record_actuals</code>, <code>release_card</code>, <code>story_report</code>, <code>link_defect</code>. Each tool runs the matching command with the same rules. Start it from the repository so that it finds <code>.pinakas.yml</code>.</p>
+    <div class="code"><pre>claude mcp add pinakas -- pinakas mcp      # Claude Code
+
+# Codex: ~/.codex/config.toml
+[mcp_servers.pinakas]
+command = "pinakas"
+args = ["mcp"]</pre><button class="copy" type="button" data-copy>copy</button></div>
 
     <h2 id="commands">Commands<a class="anchor" href="#commands">#</a></h2>
     <table>
