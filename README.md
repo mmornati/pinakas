@@ -96,6 +96,19 @@ pinakas status
 Then ask your agent to pick the next ready story.
 
 <details>
+<summary><b>GitLab</b></summary>
+
+```sh
+export GITLAB_TOKEN=<token with the api scope>
+pinakas init --provider gitlab --repo <group/project> [--url https://gitlab.example.com] [--owner <group>]
+pinakas status
+```
+
+On GitLab a column is a label, as on a GitLab issue board: `workflow::ready`, `workflow::in progress`, `workflow::review` and `workflow::done` by default (scoped labels keep one column per issue). `move` swaps the label; moving to done closes the issue and moving out of it reopens it. With `--owner <group>`, the board spans every project of the group. The hooks also guard `glab mr create`. The GitHub Action and the required check are GitHub-only for now.
+
+</details>
+
+<details>
 <summary><b>GitHub Copilot</b></summary>
 
 ```sh
@@ -152,7 +165,7 @@ The check fails when the description closes no card of the board (`Closes #42`),
 | `pinakas mcp` | MCP server over stdio for any MCP client (see below) |
 | `pinakas check-pr` / `pinakas check-stop` `[--format claude\|copilot\|codex]` | Hook entry points. Claude Code: exit 2 with the reason on stderr. Copilot and Codex: a deny or block decision as JSON |
 | `pinakas sync-pr` / `pinakas check-ci` | GitHub Action entry points, reading `GITHUB_EVENT_PATH` |
-| `pinakas init [--copilot] [--codex] [--workflow]` | Write `.pinakas.yml`, the Copilot or Codex hooks and the workflow; never overwrites |
+| `pinakas init [--provider gitlab] [--copilot] [--codex] [--workflow]` | Write `.pinakas.yml`, the Copilot or Codex hooks and the workflow; never overwrites |
 
 Issues can be written `42`, `#42` or `owner/name#42`. The claim is stored inside the git directory, so each worktree (and each parallel agent) tracks its own card and nothing gets committed.
 
@@ -259,7 +272,7 @@ A broken guardrail must never stop all work. If the hook input is malformed or t
 | GitHub Projects | ✅ board backend, v0.1 |
 | Codex | ✅ project hooks (`.codex/hooks.json`) and skills (`.agents/skills`), v0.3 |
 | MCP clients | ✅ `pinakas mcp` (stdio), v0.4 |
-| GitLab | 🔜 board backend, v0.4 |
+| GitLab | ✅ board backend (labels as columns), hooks guard `glab mr create`, v0.4 |
 
 ## Roadmap
 

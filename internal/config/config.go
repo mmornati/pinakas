@@ -29,21 +29,37 @@ type Config struct {
 	Rules Rules `yaml:"rules"`
 }
 
+// Board providers.
+const (
+	ProviderGitHub = "github"
+	ProviderGitLab = "gitlab"
+)
+
 // Board describes where the cards live.
 type Board struct {
-	// Provider is the board backend. Only "github" is supported in v0.1.
+	// Provider is the board backend: "github" (Projects v2) or "gitlab"
+	// (issues with one label per column).
 	Provider string `yaml:"provider"`
-	// Owner is the user or organization that owns the GitHub Project.
+	// URL is the GitLab instance; https://gitlab.com when empty. Unused
+	// on GitHub.
+	URL string `yaml:"url"`
+	// Owner is the user or organization that owns the GitHub Project. On
+	// GitLab it is an optional group path: the board then spans the group.
 	Owner string `yaml:"owner"`
-	// Project is the GitHub Project (v2) number.
+	// Project is the GitHub Project (v2) number. Unused on GitLab.
 	Project int `yaml:"project"`
-	// Repo is the default repository for issues, as owner/name.
+	// Repo is the default repository for issues, as owner/name (on GitLab
+	// group/subgroup/name). On GitLab without owner, it is the board.
 	Repo string `yaml:"repo"`
-	// StatusField is the single-select field holding the column.
+	// StatusField is the single-select field holding the column (GitHub).
 	StatusField string `yaml:"status_field"`
-	// Columns maps workflow keys to the option names of StatusField.
+	// Columns maps workflow keys to the option names of StatusField on
+	// GitHub, or to labels on GitLab.
 	Columns map[string]string `yaml:"columns"`
 }
+
+// ColumnKeys lists the workflow keys in order.
+var ColumnKeys = []string{ColumnReady, ColumnInProgress, ColumnReview, ColumnDone}
 
 // Rules toggles the guardrails enforced by the hooks.
 type Rules struct {
@@ -132,19 +148,28 @@ func Parse(raw []byte) (Config, error) {
 // Validate reports the first problem found in the configuration.
 func (c Config) Validate() error {
 	var problems []string
-	if c.Board.Provider != "github" {
-		problems = append(problems, fmt.Sprintf("board.provider %q is not supported (only \"github\")", c.Board.Provider))
+	switch c.Board.Provider {
+	case ProviderGitHub:
+		if c.Board.Owner == "" {
+			problems = append(problems, "board.owner is required")
+		}
+		if c.Board.Project <= 0 {
+			problems = append(problems, "board.project must be a positive project number")
+		}
+		if c.Board.Repo != "" && strings.Count(c.Board.Repo, "/") != 1 {
+			problems = append(problems, "board.repo must look like owner/name")
+		}
+	case ProviderGitLab:
+		if c.Board.Repo == "" && c.Board.Owner == "" {
+			problems = append(problems, "board.repo (project path) or board.owner (group path) is required on GitLab")
+		}
+		if c.Board.Repo != "" && !strings.Contains(c.Board.Repo, "/") {
+			problems = append(problems, "board.repo must look like group/name")
+		}
+	default:
+		problems = append(problems, fmt.Sprintf("board.provider %q is not supported (use \"github\" or \"gitlab\")", c.Board.Provider))
 	}
-	if c.Board.Owner == "" {
-		problems = append(problems, "board.owner is required")
-	}
-	if c.Board.Project <= 0 {
-		problems = append(problems, "board.project must be a positive project number")
-	}
-	if c.Board.Repo != "" && strings.Count(c.Board.Repo, "/") != 1 {
-		problems = append(problems, "board.repo must look like owner/name")
-	}
-	for _, key := range []string{ColumnReady, ColumnInProgress, ColumnReview, ColumnDone} {
+	for _, key := range ColumnKeys {
 		if c.Board.Columns[key] == "" {
 			problems = append(problems, "board.columns."+key+" is required")
 		}
@@ -153,6 +178,18 @@ func (c Config) Validate() error {
 		return fmt.Errorf("invalid %s: %s", FileName, strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+// Name describes the board for people: "acme project 3", or the GitLab
+// group or project path.
+func (c Config) Name() string {
+	if c.Board.Provider == ProviderGitLab {
+		if c.Board.Owner != "" {
+			return "GitLab group " + c.Board.Owner
+		}
+		return "GitLab project " + c.Board.Repo
+	}
+	return fmt.Sprintf("%s project %d", c.Board.Owner, c.Board.Project)
 }
 
 // Column returns the board option name for a workflow key, or the input

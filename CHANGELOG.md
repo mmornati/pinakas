@@ -2,6 +2,12 @@
 
 Notable changes to pinakas. Release notes with binaries live on the [releases page](https://github.com/mmornati/pinakas/releases).
 
+## [Unreleased]
+
+- GitLab backend: `board.provider: gitlab`, one label per column (`workflow::…` by default), moving to done closes the issue, optional group-wide board; token from `GITLAB_TOKEN`. `pinakas init --provider gitlab`.
+- The PR hook also guards `glab mr create`.
+- MCP server: `pinakas mcp` serves `board_status`, `claim_card`, `move_card`, `record_actuals`, `release_card`, `story_report` and `link_defect` over stdio (official Go MCP SDK); each tool runs the matching command with the same rules.
+
 ## [0.3.1] - 2026-11-27
 
 Fixes from the end-to-end run of v0.3.0 on a real GitHub Project.
