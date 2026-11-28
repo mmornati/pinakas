@@ -2,7 +2,7 @@
 
 Notable changes to pinakas. Release notes with binaries live on the [releases page](https://github.com/mmornati/pinakas/releases).
 
-## [Unreleased]
+## [0.4.0] - 2026-11-28
 
 - GitLab backend: `board.provider: gitlab`, one label per column (`workflow::…` by default), moving to done closes the issue, optional group-wide board; token from `GITLAB_TOKEN`. `pinakas init --provider gitlab`.
 - The PR hook also guards `glab mr create`.
@@ -52,6 +52,7 @@ Fixes found on a real GitHub Project, and prebuilt binaries.
 - Claude Code plugin with the coordinator and implementer skills and the SessionStart, PreToolUse and Stop hooks.
 - Per-worktree claims stored in the git directory.
 
+[0.4.0]: https://github.com/mmornati/pinakas/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/mmornati/pinakas/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mmornati/pinakas/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/mmornati/pinakas/compare/v0.2.0...v0.2.1

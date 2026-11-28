@@ -55,7 +55,7 @@
   </nav>
 
   <main id="main" class="doc">
-    <p class="kicker">Documentation · v0.3</p>
+    <p class="kicker">Documentation · v0.4</p>
     <h1>Put the board <em style="color:var(--accent)">in charge.</em></h1>
     <p class="lede">Everything you need to run human + agent teams from a GitHub Project with pinakas: install, configuration, agent hooks, CI, and the full reference.</p>
 
@@ -82,7 +82,7 @@
     </ul>
     <div class="code"><pre>go install github.com/mmornati/pinakas/cmd/pinakas@latest
 gh auth refresh -s project</pre><button class="copy" type="button" data-copy>copy</button></div>
-    <p>Pin a version (for example <code>@v0.3.1</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
+    <p>Pin a version (for example <code>@v0.4.0</code>) in CI and in agent setup steps so that every environment runs the same rules.</p>
 
     <h2 id="configure">Configure<a class="anchor" href="#configure">#</a></h2>
     <p>Run <code>pinakas init</code> at the root of the repository. It writes <code>.pinakas.yml</code> and never overwrites a file that already exists.</p>
@@ -132,7 +132,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27.x"
-      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.1</pre><button class="copy" type="button" data-copy>copy</button></div>
+      - run: go install github.com/mmornati/pinakas/cmd/pinakas@v0.4.0</pre><button class="copy" type="button" data-copy>copy</button></div>
 
     <h2 id="codex">Codex<a class="anchor" href="#codex">#</a></h2>
     <div class="code"><pre>pinakas init --codex     # writes .codex/hooks.json and .agents/skills/pinakas-*</pre><button class="copy" type="button" data-copy>copy</button></div>
@@ -176,7 +176,7 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
 
     <h3 id="action-inputs">Using the action directly</h3>
     <div class="code"><pre>- uses: actions/checkout@v7
-- uses: mmornati/pinakas@v0.3.1
+- uses: mmornati/pinakas@v0.4.0
   with:
     command: check-ci        # or sync-pr, report
     token: ${{ secrets.PINAKAS_TOKEN }}</pre><button class="copy" type="button" data-copy>copy</button></div>

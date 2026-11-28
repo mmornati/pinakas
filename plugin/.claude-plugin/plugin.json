@@ -1,6 +1,6 @@
 {
   "name": "pinakas",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Keep AI coding agents on the board: claim cards, record actuals, and block PRs and stops that skip the workflow.",
   "author": {
     "name": "Marco Mornati",
