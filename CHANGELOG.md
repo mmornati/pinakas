@@ -2,11 +2,12 @@
 
 Notable changes to pinakas. Release notes with binaries live on the [releases page](https://github.com/mmornati/pinakas/releases).
 
-## [Unreleased]
+## [0.4.0] - 2026-11-28
 
 - GitLab backend: `board.provider: gitlab`, one label per column (`workflow::…` by default), moving to done closes the issue, optional group-wide board; token from `GITLAB_TOKEN`. `pinakas init --provider gitlab`.
 - The PR hook also guards `glab mr create`.
 - MCP server: `pinakas mcp` serves `board_status`, `claim_card`, `move_card`, `record_actuals`, `release_card`, `story_report` and `link_defect` over stdio (official Go MCP SDK); each tool runs the matching command with the same rules.
+- `report`: the median and total agent time read `< 1 min` instead of `0 min` for stories under a minute, like the story rows.
 
 ## [0.3.1] - 2026-11-27
 
@@ -52,6 +53,7 @@ Fixes found on a real GitHub Project, and prebuilt binaries.
 - Claude Code plugin with the coordinator and implementer skills and the SessionStart, PreToolUse and Stop hooks.
 - Per-worktree claims stored in the git directory.
 
+[0.4.0]: https://github.com/mmornati/pinakas/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/mmornati/pinakas/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/mmornati/pinakas/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/mmornati/pinakas/compare/v0.2.0...v0.2.1

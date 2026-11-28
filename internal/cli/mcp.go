@@ -74,6 +74,10 @@ func (app *App) mcpServer() *mcp.Server {
 		sub.Stdin, sub.Stdout, sub.Stderr = strings.NewReader(""), &out, &errOut
 		code := Execute(&sub, args)
 		text := strings.TrimSpace(out.String())
+		// Errors name CLI flags; MCP clients pass the force parameter instead.
+		errText := strings.ReplaceAll(errOut.String(), "(or --force)", "(or force: true)")
+		errOut.Reset()
+		errOut.WriteString(errText)
 		if e := strings.TrimSpace(errOut.String()); e != "" {
 			text = strings.TrimSpace(text + "\n" + e)
 		}

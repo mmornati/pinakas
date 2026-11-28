@@ -115,7 +115,7 @@ On GitLab a column is a label, as on a GitLab issue board: `workflow::ready`, `w
 pinakas init --copilot   # writes .github/hooks/pinakas.json
 ```
 
-Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.3.1`) and expose `GH_TOKEN`.
+Copilot CLI and the Copilot cloud agent load repository hooks from `.github/hooks/`. The cloud agent also needs `pinakas` on its path and a token for the board: install it in `.github/workflows/copilot-setup-steps.yml` (`go install github.com/mmornati/pinakas/cmd/pinakas@v0.4.0`) and expose `GH_TOKEN`.
 
 </details>
 
@@ -247,7 +247,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: mmornati/pinakas@v0.3.1
+      - uses: mmornati/pinakas@v0.4.0
         with:
           command: report
           args: --since 7d
@@ -279,7 +279,7 @@ A broken guardrail must never stop all work. If the hook input is malformed or t
 - [x] **v0.1** CLI on GitHub Projects, Claude Code plugin with two skills and three hooks.
 - [x] **v0.2** GitHub Action for card moves and durations, required CI check, Copilot wiring.
 - [x] **v0.3** Per-story metrics schema, `pinakas report`, Codex adapter.
-- [ ] **v0.4** GitLab backend, MCP server.
+- [x] **v0.4** GitLab backend, MCP server.
 - [ ] **v1.0** Stable config schema, complete docs, example project, signed releases.
 
 ## Contributing

@@ -220,7 +220,7 @@ acme/app#47  31 min      97000   <span class="g">yes</span>         1 h 40     0
           <p class="lede" style="margin:18px 0 22px">When a bug traces back to a delivered story, link them. The report counts defects found within 30 days of delivery, and the defect rate only uses stories whose window has ended.</p>
           <div class="code"><pre>pinakas defect 41 57   <span class="c"># bug #57 came from story #41</span></pre><button class="copy" type="button" data-copy>copy</button></div>
           <p class="term-cap" style="margin-top:22px">The Action posts it weekly to the job summary:</p>
-          <div class="code" style="margin-top:10px"><pre>- uses: mmornati/pinakas@v0.3.1
+          <div class="code" style="margin-top:10px"><pre>- uses: mmornati/pinakas@v0.4.0
   with:
     command: report
     args: --since 7d
@@ -268,14 +268,14 @@ pinakas status</pre><button class="copy" type="button" data-copy>copy</button></
         <div class="tool"><span class="tag ok">today</span><h3>GitHub Copilot</h3><p>Repository hooks in <code>.github/hooks/</code> for Copilot CLI and the cloud agent.</p></div>
         <div class="tool"><span class="tag ok">today</span><h3>GitHub Projects</h3><p>Projects v2 boards, owned by a user or an organization.</p></div>
         <div class="tool"><span class="tag ok">today</span><h3>Codex</h3><p>Project hooks in <code>.codex/hooks.json</code> and skills in <code>.agents/skills/</code>.</p></div>
-        <div class="tool"><span class="tag ok">v0.4</span><h3>GitLab</h3><p>Issue boards with one label per column; hooks guard <code>glab mr create</code>.</p></div>
-        <div class="tool"><span class="tag next">v0.4</span><h3>MCP server</h3><p>The board for any MCP-capable client.</p></div>
+        <div class="tool"><span class="tag ok">today</span><h3>GitLab</h3><p>Issue boards with one label per column; hooks guard <code>glab mr create</code>.</p></div>
+        <div class="tool"><span class="tag ok">today</span><h3>MCP server</h3><p><code>pinakas mcp</code>: the board for any MCP-capable client.</p></div>
       </div>
       <ol class="road rv" aria-label="Roadmap">
         <li class="done"><b>v0.1</b><p>CLI on GitHub Projects, Claude Code plugin with two skills and three hooks.</p></li>
         <li class="done"><b>v0.2</b><p>GitHub Action for card moves and durations, required check, Copilot wiring.</p></li>
-        <li class="done now"><b>v0.3</b><p>Per-story metrics schema, <code>pinakas report</code>, Codex adapter.</p></li>
-        <li><b>v0.4</b><p>GitLab backend, MCP server.</p></li>
+        <li class="done"><b>v0.3</b><p>Per-story metrics schema, <code>pinakas report</code>, Codex adapter.</p></li>
+        <li class="done now"><b>v0.4</b><p>GitLab backend, MCP server.</p></li>
         <li><b>v1.0</b><p>Stable config schema, complete docs, example project, signed releases.</p></li>
       </ol>
     </div>

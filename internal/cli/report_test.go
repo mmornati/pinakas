@@ -214,3 +214,16 @@ func TestFinishedClaimLifecycle(t *testing.T) {
 		t.Errorf("csv = %q", h.stdout)
 	}
 }
+
+// v0.4.0 regression run: two stories of 0 s and one of 82 s gave a
+// "0 min" median while every story row said "< 1 min".
+func TestAgentTimeSummaryNeverZero(t *testing.T) {
+	for in, want := range map[float64]string{0: "< 1 min", 0.5: "< 1 min", 1.37: "1 min", 45: "45 min"} {
+		if got := agentText(in); got != want {
+			t.Errorf("agentText(%v) = %q, want %q", in, got, want)
+		}
+	}
+	if got := agentTotal(metrics.Summary{}); got != "-" {
+		t.Errorf("no actuals: %q", got)
+	}
+}
