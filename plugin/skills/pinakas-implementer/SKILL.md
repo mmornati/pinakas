@@ -29,6 +29,7 @@ else holds it, or this worktree still has an open card.
 
 ```sh
 gh pr create --fill --body "Closes #42"
+# on GitLab: glab mr create --fill --description "Closes #42"
 ```
 
 Link the issue with `Closes #42`: the pinakas GitHub Action moves the card

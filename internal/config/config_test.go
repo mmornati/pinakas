@@ -43,14 +43,33 @@ func TestParseOverridesColumns(t *testing.T) {
 }
 
 func TestValidateReportsProblems(t *testing.T) {
-	_, err := Parse([]byte("board:\n  provider: jira\n  repo: nope\n"))
+	_, err := Parse([]byte("board:\n  repo: nope\n"))
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	for _, want := range []string{"provider", "owner", "project", "owner/name"} {
+	for _, want := range []string{"owner", "project", "owner/name"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q should mention %q", err, want)
 		}
+	}
+	if _, err := Parse([]byte("board:\n  provider: jira\n")); err == nil || !strings.Contains(err.Error(), "provider") {
+		t.Errorf("unknown provider: %v", err)
+	}
+}
+
+func TestGitLabConfig(t *testing.T) {
+	cfg, err := Parse([]byte("board:\n  provider: gitlab\n  repo: acme/platform/app\n  columns:\n    ready: workflow::ready\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Column(ColumnReady) != "workflow::ready" || cfg.Board.Project != 0 {
+		t.Errorf("cfg = %+v", cfg.Board)
+	}
+	if _, err := Parse([]byte("board:\n  provider: gitlab\n")); err == nil || !strings.Contains(err.Error(), "group path") {
+		t.Errorf("gitlab without repo or owner: %v", err)
+	}
+	if _, err := Parse([]byte("board:\n  provider: gitlab\n  owner: acme\n")); err != nil {
+		t.Errorf("gitlab group board: %v", err)
 	}
 }
 

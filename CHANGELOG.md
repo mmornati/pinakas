@@ -2,6 +2,11 @@
 
 Notable changes to pinakas. Release notes with binaries live on the [releases page](https://github.com/mmornati/pinakas/releases).
 
+## [Unreleased]
+
+- GitLab backend: `board.provider: gitlab`, one label per column (`workflow::…` by default), moving to done closes the issue, optional group-wide board; token from `GITLAB_TOKEN`. `pinakas init --provider gitlab`.
+- The PR hook also guards `glab mr create`.
+
 ## [0.3.1] - 2026-11-27
 
 Fixes from the end-to-end run of v0.3.0 on a real GitHub Project.

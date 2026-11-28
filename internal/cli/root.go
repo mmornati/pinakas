@@ -16,6 +16,7 @@ import (
 
 	"github.com/mmornati/pinakas/internal/board"
 	"github.com/mmornati/pinakas/internal/board/github"
+	"github.com/mmornati/pinakas/internal/board/gitlab"
 	"github.com/mmornati/pinakas/internal/config"
 	"github.com/mmornati/pinakas/internal/state"
 )
@@ -52,16 +53,29 @@ type App struct {
 func NewApp() *App {
 	dir, _ := os.Getwd()
 	return &App{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Dir:    dir,
-		Now:    time.Now,
-		NewBoard: func(cfg config.Config) (board.Board, error) {
-			return github.New(cfg.Board.Owner, cfg.Board.Project, cfg.Board.StatusField)
-		},
+		Stdin:    os.Stdin,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		Dir:      dir,
+		Now:      time.Now,
+		NewBoard: newBoard,
 		NewStore: state.DefaultStore,
 	}
+}
+
+// newBoard builds the backend named by board.provider.
+func newBoard(cfg config.Config) (board.Board, error) {
+	if cfg.Board.Provider == config.ProviderGitLab {
+		columns := make([]string, 0, len(config.ColumnKeys))
+		for _, k := range config.ColumnKeys {
+			columns = append(columns, cfg.Column(k))
+		}
+		return gitlab.New(gitlab.Options{
+			URL: cfg.Board.URL, Token: gitlab.TokenFromEnv(), Group: cfg.Board.Owner, Project: cfg.Board.Repo,
+			Columns: columns, Done: cfg.Column(config.ColumnDone),
+		})
+	}
+	return github.New(cfg.Board.Owner, cfg.Board.Project, cfg.Board.StatusField)
 }
 
 // exitError carries a specific process exit code.
