@@ -67,7 +67,7 @@ func TestMCPServer(t *testing.T) {
 		t.Fatalf("board_status = %q (error %v)", text, isErr)
 	}
 
-	if text, isErr := call(t, cs, "claim_card", map[string]any{"issue": "3"}); !isErr || !strings.Contains(text, "only ready cards") {
+	if text, isErr := call(t, cs, "claim_card", map[string]any{"issue": "3"}); !isErr || !strings.Contains(text, "only ready cards") || !strings.Contains(text, "(or force: true)") {
 		t.Errorf("claiming a done card must fail with the CLI reason: %q", text)
 	}
 	if text, isErr := call(t, cs, "claim_card", map[string]any{"issue": "#1"}); isErr || !strings.Contains(text, "Claimed acme/app#1") {

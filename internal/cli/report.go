@@ -336,8 +336,8 @@ func summaryLines(s metrics.Summary) [][2]string {
 	}
 	return [][2]string{
 		{"Stories", fmt.Sprintf("%d (%d with actuals)", s.Stories, s.WithActuals)},
-		{"Median agent time", opt(s.MedianDuration, minutesText)},
-		{"Total agent time", minutesText(s.TotalDuration)},
+		{"Median agent time", opt(s.MedianDuration, agentText)},
+		{"Total agent time", agentTotal(s)},
 		{"Total tokens", strconv.Itoa(s.TotalTokens)},
 		{"First-pass rate", opt(s.FirstPassRate, pct)},
 		{"Review findings", findings},
@@ -346,6 +346,22 @@ func summaryLines(s metrics.Summary) [][2]string {
 		{"Defects within 30 days", strconv.Itoa(s.Defects30)},
 		{"Stories with a defect", defectRate},
 	}
+}
+
+// agentText renders agent time like the story rows: a recorded duration
+// under a minute, zero seconds included, reads "< 1 min".
+func agentText(m float64) string {
+	if m < 1 {
+		return "< 1 min"
+	}
+	return minutesText(m)
+}
+
+func agentTotal(s metrics.Summary) string {
+	if s.WithActuals == 0 {
+		return "-"
+	}
+	return agentText(s.TotalDuration)
 }
 
 // minutesText renders minutes as "< 1 min", "45 min", "2 h 05" or "3 d 4 h".
